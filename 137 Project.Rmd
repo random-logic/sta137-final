@@ -1,0 +1,185 @@
+---
+title: "137 Project"
+author: "Quynh Trinh,"
+date: "2025-05-30"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+# Load required libraries
+library(tidyverse)      # For data manipulation and visualization
+library(forecast)       # For Box-Cox transformation and time series analysis
+library(tseries)        # For additional time series functions
+library(ggplot2)        # For plotting
+library(carData)
+```
+
+
+# Time Series Plot for the Data
+```{r}
+load("finalproject.Rdata")
+ts.plot(finalPro_data)
+```
+
+Quick look:
+
+- Upward trend
+- Some fluctuations and short-term volatility
+- Non-stationary
+
+
+
+# GDP Model
+## Summary GDP
+
+```{r}
+# 1. Diagnose model for GDP
+model_gdp <- lm(GDP ~ Year + Growth + CPI + Imports + Exports + Population, data = finalPro_data)
+summary(model_gdp)
+
+```
+- Significant variables: Year, Exports
+
+## Residuals Diagnostic
+
+### ACF and Ljung-Box
+
+```{r}
+#ACF GDP
+acf(residuals(model_gdp), main="ACF of Residuals GDP")
+
+# L-jung-box
+Box.test(residuals(model_gdp), lag = 20, type = "Ljung-Box")
+
+```
+Quick look:
+
+- Autocorrelation remains positive before approaching zero
+- The pattern shows strong autocorrelation and persistence in the residuals
+- Slow decay --> non-stationary or trending series
+
+
+## Plot GDP
+
+```{r}
+# Diagnostic plots for GDP model
+par(mfrow = c(2,2))
+plot(model_gdp)
+```
+Quick interpretation:
+
+- Residuals vs fitted: looks good, no obvious pattern suggests linearity
+- QQ plot: residuals are close to the line, suggests approximately normally distributed
+- Scale-Location: slightly upward trend, meaning the variance of errors is not constant
+- Residuals vs Leverage: most points have low leverage so this is good
+
+Recommendations:
+
+- Transforming the dependent variable; considering Box-Cox or log transformation
+
+
+## Box-Cox for GDP (Draft)
+
+```{r}
+library(MASS)
+# Perform Box-Cox transformation
+bc <- boxcox(model_gdp, lambda = seq(-2, 2, by = 0.1))
+
+# Find the lambda with the highest log-likelihood
+best_lambda <- bc$x[which.max(bc$y)]
+cat("Best lambda:", best_lambda, "\n")
+
+# Refit using the Box-Cox transformed GDP:
+finalPro_data$GDP_boxcox <- (finalPro_data$GDP^best_lambda - 1) / best_lambda
+model_gdp_boxcox <- lm(GDP_boxcox ~ Year + Growth + CPI + Imports + Exports + Population, data = finalPro_data)
+summary(model_gdp_boxcox)
+
+par(mfrow = c(2,2))
+plot(model_gdp_boxcox)
+```
+
+## (Draft) Use auto.arima()
+
+```{r}
+# GDP time series covers years 1960–2017:
+GDP_ts <- ts(finalPro_data$GDP, start = 1960, frequency = 1)
+
+# Use auto.arima to find the best ARIMA model
+best_arima_gdp <- auto.arima(GDP_ts)
+
+# Show model summary
+summary(best_arima_gdp)
+
+# If you want to plot diagnostics:
+checkresiduals(best_arima_gdp)
+```
+Summary:
+- ARIMA(0,1,0) model fits the GDP time series pretty well
+- Residuals show no significant autocorrelation
+- Errors appear approximately normal
+- Good baseline so far
+
+# Imports Model
+
+### Summary Imports
+
+```{r}
+# 2. Diagnose model for Imports
+model_imports <- lm(Imports ~ Year + GDP + Growth + CPI + Exports + Population, data = finalPro_data)
+summary(model_imports)
+```
+- Significant variables: Year, CPI, Exports, Population
+
+## Residuals Diagnostics 
+
+```{r}
+#ACF Imports
+acf(residuals(model_imports), main="ACF of Residuals Imports")
+
+# L-jung-box
+Box.test(residuals(model_imports), lag = 20, type = "Ljung-Box")
+
+```
+Quick look:
+
+- ACF plot shows no significant autocorrelation at higher lags
+- Possible AR(1) model
+- Ljung-box p-value > 0.1, so residuals are likely white noise
+
+### Plot Imports
+
+```{r}
+# Diagnostic plots for Imports model
+par(mfrow = c(2,2))
+plot(model_imports)
+
+```
+
+Quick interpretation:
+
+- Residuals vs fitted: linearity assumption is reasonably met
+- QQ plot: approximately normally distributed
+- Scale-Location: variance of the residuals is roughly constant
+- Residuals vs Leverage: most points have low leverage
+
+## (Draft) auto.arima() for Imports
+
+```{r}
+# Imports time series covers years 1960–2017:
+Imports_ts <- ts(finalPro_data$Imports, start = 1960, frequency = 1)
+
+# Use auto.arima to find the best ARIMA model
+best_arima_imports <- auto.arima(Imports_ts)
+
+# Show model summary
+summary(best_arima_imports)
+
+# Plot diagnostics:
+checkresiduals(best_arima_imports)
+```
+Summary:
+
+- ARIMA(0,1,2) model fits the Imports time series well
+- Residual diagnostics shows good model fit with no significant autocorrelation left
