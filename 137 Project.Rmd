@@ -30,7 +30,6 @@ Quick look:
 - Non-stationary
 
 
-
 # GDP Model
 ## Summary GDP
 
@@ -58,7 +57,7 @@ Quick look:
 
 - Autocorrelation remains positive before approaching zero
 - The pattern shows strong autocorrelation and persistence in the residuals
-- Slow decay --> non-stationary or trending series
+- Slow decay --> the data is non-stationary or trending series
 
 
 ## Plot GDP
@@ -67,13 +66,33 @@ Quick look:
 # Diagnostic plots for GDP model
 par(mfrow = c(2,2))
 plot(model_gdp)
+
+# Shapiro-Wilks for GDP
+ei_gdp = model_gdp$residuals
+the.SWtest_gdp = shapiro.test(ei_gdp)
+the.SWtest_gdp
+
+# Brown/Levene test
+# Extract residuals from your model
+res <- residuals(model_gdp)
+
+# Make a grouping variable (e.g., you can split by median fitted value)
+fit <- fitted(model_gdp)
+group <- ifelse(fit > median(fit), "High", "Low")
+
+# Levene's Test (Brown-Forsythe is a median-centered version of Levene's test)
+leveneTest(res ~ group, center=median) # Brown-Forsythe test
+
+
 ```
-Quick interpretation:
+Quick note:
 
 - Residuals vs fitted: looks good, no obvious pattern suggests linearity
 - QQ plot: residuals are close to the line, suggests approximately normally distributed
 - Scale-Location: slightly upward trend, meaning the variance of errors is not constant
 - Residuals vs Leverage: most points have low leverage so this is good
+- Shapiro-Wilk test: W = 0.98882, p-value = 0.8709 --> met normality assumption
+- Brown test: p-value = 0.002518, so constant variance assumption is not met
 
 Recommendations:
 
@@ -87,9 +106,9 @@ library(MASS)
 # Perform Box-Cox transformation
 bc <- boxcox(model_gdp, lambda = seq(-2, 2, by = 0.1))
 
-# Find the lambda with the highest log-likelihood
+# Find the best lambda
 best_lambda <- bc$x[which.max(bc$y)]
-cat("Best lambda:", best_lambda, "\n")
+#cat("Best lambda:", best_lambda, "\n")
 
 # Refit using the Box-Cox transformed GDP:
 finalPro_data$GDP_boxcox <- (finalPro_data$GDP^best_lambda - 1) / best_lambda
@@ -98,7 +117,30 @@ summary(model_gdp_boxcox)
 
 par(mfrow = c(2,2))
 plot(model_gdp_boxcox)
+
+# Check variance again
+res_boxcox <- residuals(model_gdp_boxcox)
+
+# Make a grouping variable
+fit_boxcox <- fitted(model_gdp_boxcox)
+group_boxcox <- ifelse(fit_boxcox > median(fit_boxcox), "High", "Low")
+
+# Levene's Test (Brown-Forsythe is a median-centered version of Levene's test)
+leveneTest(res_boxcox ~ group_boxcox, center=median) # Brown-Forsythe test
 ```
+
+## Box-Cox from lecture notes
+
+```{r}
+x = seq(1,58)
+
+library(MASS)
+bc_lec = boxcox(finalPro_data ~ x)
+lambda = bc_lec$x[which.max(bc_lec$finalPro_data)]
+```
+
+
+The variance for model GDP improved after transforming
 
 ## (Draft) Use auto.arima()
 
@@ -112,14 +154,18 @@ best_arima_gdp <- auto.arima(GDP_ts)
 # Show model summary
 summary(best_arima_gdp)
 
-# If you want to plot diagnostics:
-checkresiduals(best_arima_gdp)
+# Plot diagnostics:
+#checkresiduals(best_arima_gdp)
+
+library(astsa)
+arima_010 = sarima(GDP_ts, 0, 1, 0)
 ```
 Summary:
 - ARIMA(0,1,0) model fits the GDP time series pretty well
 - Residuals show no significant autocorrelation
 - Errors appear approximately normal
 - Good baseline so far
+
 
 # Imports Model
 
@@ -177,9 +223,13 @@ best_arima_imports <- auto.arima(Imports_ts)
 summary(best_arima_imports)
 
 # Plot diagnostics:
-checkresiduals(best_arima_imports)
+#checkresiduals(best_arima_imports)
+
+arima_010 = sarima(Imports_ts, 0, 1, 2)
 ```
 Summary:
 
 - ARIMA(0,1,2) model fits the Imports time series well
 - Residual diagnostics shows good model fit with no significant autocorrelation left
+
+
