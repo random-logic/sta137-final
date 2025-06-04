@@ -1,225 +1,250 @@
 ---
-title: "137 Project"
+title: "STA 137 Final Project"
 author: "Quynh Trinh,"
-date: "2025-05-30"
+date: "2025-06-04"
 output:
   pdf_document: default
   html_document: default
 ---
 
-```{r}
-# Load required libraries
-library(tidyverse)      # For data manipulation and visualization
-library(forecast)       # For Box-Cox transformation and time series analysis
-library(tseries)        # For additional time series functions
-library(ggplot2)        # For plotting
-library(carData)
+```{r, include=FALSE}
+# Load library
 library(car)
-```
-
-
-# Time Series Plot for the Data
-```{r}
-load("finalproject.Rdata")
-ts.plot(finalPro_data)
-```
-
-Quick look:
-
-- Upward trend
-- Some fluctuations and short-term volatility
-- Non-stationary
-
-
-# GDP Model
-## Summary GDP
-
-```{r}
-# 1. Diagnose model for GDP
-model_gdp <- lm(GDP ~ Year + Growth + CPI + Imports + Exports + Population, data = finalPro_data)
-summary(model_gdp)
-
-```
-- Significant variables: Year, Exports
-
-## Residuals Diagnostic
-
-### ACF and Ljung-Box
-
-```{r}
-#ACF GDP
-acf(residuals(model_gdp), main="ACF of Residuals GDP")
-
-# L-jung-box
-Box.test(residuals(model_gdp), lag = 20, type = "Ljung-Box")
-
-```
-Quick look:
-
-- Autocorrelation remains positive before approaching zero
-- The pattern shows strong autocorrelation and persistence in the residuals
-- Slow decay --> the data is non-stationary or trending series
-
-
-## Plot GDP
-
-```{r}
-# Diagnostic plots for GDP model
-par(mfrow = c(2,2))
-plot(model_gdp)
-
-# Shapiro-Wilks for GDP
-ei_gdp = model_gdp$residuals
-the.SWtest_gdp = shapiro.test(ei_gdp)
-the.SWtest_gdp
-
-# Brown/Levene test
-# Extract residuals from your model
-res <- residuals(model_gdp)
-
-# Make a grouping variable (e.g., you can split by median fitted value)
-fit <- fitted(model_gdp)
-group <- ifelse(fit > median(fit), "High", "Low")
-
-# Levene's Test (Brown-Forsythe is a median-centered version of Levene's test)
-leveneTest(res ~ group, center=median) # Brown-Forsythe test
-```
-Quick note:
-
-- Residuals vs fitted: looks good, no obvious pattern suggests linearity
-- QQ plot: residuals are close to the line, suggests approximately normally distributed
-- Scale-Location: slightly upward trend, meaning the variance of errors is not constant
-- Residuals vs Leverage: most points have low leverage so this is good
-- Shapiro-Wilk test: W = 0.98882, p-value = 0.8709 --> met normality assumption
-- Brown test: p-value = 0.002518, so constant variance assumption is not met
-
-Recommendations:
-
-- Transforming the dependent variable; considering Box-Cox or log transformation
-
-
-## Box-Cox for GDP (Draft)
-
-```{r}
+library(ggplot2)
+library(astsa)
+library(forecast)
 library(MASS)
-# Perform Box-Cox transformation
+
+# Load data
+load("finalproject.Rdata")
+```
+
+# GDP Time Series
+
+## Plot GDP Time Series & Observing
+
+```{r}
+# Plot GDP
+gdp_ts <- ts(finalPro_data$GDP, start = 1960, frequency = 1)
+
+ts.plot(gdp_ts, main="GDP Time Series", ylab="GDP")
+```
+Summary:
+
+- GDP time series has upward trend, this shows this is non-stationary
+- It has peaks around every 10 year: 1980, 1990, 2010
+
+## Diagnostic GDP 
+
+### Coefficients 
+
+```{r}
+# 
+model_gdp <- lm(GDP ~ Year + Growth + CPI + Imports + Exports + Population, data = finalPro_data)
+
+summary(model_gdp)
+```
+(Note: default p-value = 0.1)
+
+Significant: Year, CPI, Exports
+
+### Residuals
+
+```{r}
+# Residuals diagnostics for GDP
+acf(gdp_ts, main = "ACF of GDP Time Series")
+
+#Ljung test
+Box.test(gdp_ts)
+```
+
+ACF:
+
+- ACF values are decreasing gradually and stay above significance bounds, this means the time series is non-stationary, it likely has trend
+  
+Ljung-test
+
+- p-value = 1.428e-12 (very small), this means the residuals are not independent.
+
+
+### Normality and Constant Variance
+
+```{r}
+resid_gdp <- residuals(model_gdp)
+
+# Check normality
+qqnorm(model_gdp$residuals)
+qqline(model_gdp$residuals)
+
+shapiro.test(resid_gdp) # Shapiro-Wilk test
+
+# Check constant variance
+plot(fitted(model_gdp), resid_gdp,
+     xlab = "Fitted values", ylab = "Residuals",
+     main = "Residuals vs Fitted")
+abline(h = 0, col = "red") # Residuals vs Fitted plot
+
+group <- ifelse(fitted(model_gdp) > median(fitted(model_gdp)), "High", "Low")
+leveneTest(resid_gdp ~ group, center=median)
+```
+Normality:
+
+- The residuals are close to the line, this means the data seems to meet normality
+
+- Shapiro: p-value = 0.5794. This means the data met normality
+
+Constant Variance:
+
+- Plot shows no patterns, this means the data seems to meet constant variance
+
+- Brown-Forsythe test: p-value = 0.01507 < 0.05. This means the data not met constant variance. Thus, transformation is needed.
+
+## Box-Cox Transformation for GDP
+
+```{r, include=FALSE}
+# Use boxcox for GDP model
 bc <- boxcox(model_gdp, lambda = seq(-2, 2, by = 0.1))
 
-# Find the best lambda
-best_lambda <- bc$x[which.max(bc$y)]
-#cat("Best lambda:", best_lambda, "\n")
+# Find best lambda
+lambda_gdp <- bc$x[which.max(bc$y)]
 
-# Refit using the Box-Cox transformed GDP:
-finalPro_data$GDP_boxcox <- (finalPro_data$GDP^best_lambda - 1) / best_lambda
-model_gdp_boxcox <- lm(GDP_boxcox ~ Year + Growth + CPI + Imports + Exports + Population, data = finalPro_data)
-summary(model_gdp_boxcox)
-
-par(mfrow = c(2,2))
-plot(model_gdp_boxcox)
-
-# Check variance again
-res_boxcox <- residuals(model_gdp_boxcox)
-
-# Make a grouping variable
-fit_boxcox <- fitted(model_gdp_boxcox)
-group_boxcox <- ifelse(fit_boxcox > median(fit_boxcox), "High", "Low")
-
-# Levene's Test (Brown-Forsythe is a median-centered version of Levene's test)
-leveneTest(res_boxcox ~ group_boxcox, center=median) # Brown-Forsythe test
 ```
 
+### Diagnostic for Tranformation
 
-The variance for model GDP improved after transforming
 
-## (Draft) Use auto.arima()
+```{r, echo=FALSE}
+# Refit using the Box-Cox transformed GDP
+# Formula: y(lambda) = (y^lambda - 1)/ lambda
+finalPro_data$GDP_boxcox <- ((finalPro_data$GDP^lambda_gdp) - 1) / lambda_gdp
+model_gdp_boxcox <- lm(GDP_boxcox ~ Year + Growth + CPI + Imports + Exports + Population, data = finalPro_data)
+
+# Coefficients
+summary(model_gdp_boxcox)
+```
+
+Significant coefficients: Year, CPI, Exports, Population
 
 ```{r}
-# GDP time series covers years 1960–2017:
-GDP_ts <- ts(finalPro_data$GDP, start = 1960, frequency = 1)
+# Normality box-cox
+resid_gdp_boxcox <- residuals(model_gdp_boxcox)
 
-# Use auto.arima to find the best ARIMA model
-best_arima_gdp <- auto.arima(GDP_ts)
+# Check normality
+qqnorm(model_gdp_boxcox$residuals)
+qqline(model_gdp_boxcox$residuals)
 
-# Show model summary
-summary(best_arima_gdp)
+shapiro.test(resid_gdp_boxcox) # Shapiro-Wilk test
 
-# Plot diagnostics:
-#checkresiduals(best_arima_gdp)
+# Check constant variance
+plot(fitted(model_gdp_boxcox), resid_gdp_boxcox,
+     xlab = "Fitted values", ylab = "Residuals",
+     main = "Residuals vs Fitted after Transforming")
+abline(h = 0, col = "red") # Residuals vs Fitted plot
 
-library(astsa)
-arima_010 = sarima(GDP_ts, 0, 1, 0)
+group_gdp_boxcox <- ifelse(fitted(model_gdp_boxcox) > median(fitted(model_gdp_boxcox)), "High", "Low")
+leveneTest(resid_gdp_boxcox ~ group_gdp_boxcox, center=median)
+
 ```
+Normality and Constant Variance:
+
+- Both assumptions are met after transforming
+
+## Find the best ARIMA model for GDP Using auto.arima()
+
+```{r}
+arima_gdp <- auto.arima(gdp_ts)
+arima_gdp
+```
+Suggested: ARIMA(0,1,0)
+
+
+# Imports Time Series
+
+## Plot Imports Time Series
+
+```{r}
+# Plot imports
+imports_ts <- ts(finalPro_data$Imports, start = 1960, frequency = 1)
+
+ts.plot(imports_ts, main="Imports Time Series", ylab="Imports")
+```
+
 Summary:
 
-- ARIMA(0,1,0) model fits the GDP time series pretty well
-- Residuals show no significant autocorrelation
-- Errors appear approximately normal
-- Good baseline so far
+- The plot shows there is downward trend from 1960 to 2005, and increasing after that
 
+- This means the Imports time series is non-stationary
 
-# Imports Model
+## Diagnostics Imports
 
-### Summary Imports
+### Coefficients
 
 ```{r}
-# 2. Diagnose model for Imports
-model_imports <- lm(Imports ~ Year + GDP + Growth + CPI + Exports + Population, data = finalPro_data)
+model_imports <- lm(Imports ~ Year + Growth + CPI + GDP + Exports + Population, data = finalPro_data)
+
 summary(model_imports)
 ```
-- Significant variables: Year, CPI, Exports, Population
+Significant: CPI, Exports
 
-## Residuals Diagnostics 
-
-```{r}
-#ACF Imports
-acf(residuals(model_imports), main="ACF of Residuals Imports")
-
-# L-jung-box
-Box.test(residuals(model_imports), lag = 20, type = "Ljung-Box")
-
-```
-Quick look:
-
-- ACF plot shows no significant autocorrelation at higher lags
-- Possible AR(1) model
-- Ljung-box p-value > 0.1, so residuals are likely white noise
-
-### Plot Imports
+### Residuals
 
 ```{r}
-# Diagnostic plots for Imports model
-par(mfrow = c(2,2))
-plot(model_imports)
+# Residuals diagnostics for Imports
+acf(imports_ts, main = "ACF of Imports Time Series")
 
+#Ljung test
+Box.test(imports_ts)
 ```
 
-Quick interpretation:
+ACF:
 
-- Residuals vs fitted: linearity assumption is reasonably met
-- QQ plot: approximately normally distributed
-- Scale-Location: variance of the residuals is roughly constant
-- Residuals vs Leverage: most points have low leverage
+- ACF values decrease gradually and stay above significance bounds, this means the time series is non-stationary
 
-## (Draft) auto.arima() for Imports
+Ljung test:
+
+- p-value = 7.46e-11, this means the residuals are not independent
+
+
+### Normality and Constant Variance
 
 ```{r}
-# Imports time series covers years 1960–2017:
-Imports_ts <- ts(finalPro_data$Imports, start = 1960, frequency = 1)
+resid_imports <- residuals(model_imports)
 
-# Use auto.arima to find the best ARIMA model
-best_arima_imports <- auto.arima(Imports_ts)
+# Check normality
+qqnorm(model_imports$residuals)
+qqline(model_imports$residuals)
 
-# Show model summary
-summary(best_arima_imports)
+shapiro.test(resid_imports) # Shapiro-Wilk test
 
-# Plot diagnostics:
-#checkresiduals(best_arima_imports)
+# Check constant variance
+plot(fitted(model_imports), resid_imports,
+     xlab = "Fitted values", ylab = "Residuals",
+     main = "Residuals vs Fitted")
+abline(h = 0, col = "red") # Residuals vs Fitted plot
 
-arima_012 = sarima(Imports_ts, 0, 1, 2)
+group_imports <- ifelse(fitted(model_imports) > median(fitted(model_imports)), "High", "Low")
+leveneTest(resid_imports ~ group_imports, center=median)
 ```
-Summary:
 
-- ARIMA(0,1,2) model fits the Imports time series well
-- Residual diagnostics shows good model fit with no significant autocorrelation left
+Normality:
 
+- Most residuals are close to the line except some points at the right end of the plot. The data might meet normality
 
+- Shapiro test: p-value = 0.1748. This means the data met normality
+
+Constant Variance:
+
+- The plot shows some patterns; most points are at the left side and waving pattern. This means the data might not meet constant variance
+
+- Brown test: 0.07019 > 0.05. This means the data met constant variance
+
+Thus, there is no needed for transforming Imports model.
+
+## Find the Best ARIMA Model for Imports Using auto.arima()
+
+```{r}
+arima_imports <- auto.arima(imports_ts)
+arima_imports
+```
+
+Suggested: ARIMA(0,1,2)
