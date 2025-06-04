@@ -215,7 +215,7 @@ summary(best_arima_imports)
 # Plot diagnostics:
 #checkresiduals(best_arima_imports)
 
-arima_010 = sarima(Imports_ts, 0, 1, 2)
+arima_012 = sarima(Imports_ts, 0, 1, 2)
 ```
 Summary:
 
