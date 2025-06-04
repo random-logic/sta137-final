@@ -14,6 +14,7 @@ library(forecast)       # For Box-Cox transformation and time series analysis
 library(tseries)        # For additional time series functions
 library(ggplot2)        # For plotting
 library(carData)
+library(car)
 ```
 
 
@@ -82,8 +83,6 @@ group <- ifelse(fit > median(fit), "High", "Low")
 
 # Levene's Test (Brown-Forsythe is a median-centered version of Levene's test)
 leveneTest(res ~ group, center=median) # Brown-Forsythe test
-
-
 ```
 Quick note:
 
@@ -129,16 +128,6 @@ group_boxcox <- ifelse(fit_boxcox > median(fit_boxcox), "High", "Low")
 leveneTest(res_boxcox ~ group_boxcox, center=median) # Brown-Forsythe test
 ```
 
-## Box-Cox from lecture notes
-
-```{r}
-x = seq(1,58)
-
-library(MASS)
-bc_lec = boxcox(finalPro_data ~ x)
-lambda = bc_lec$x[which.max(bc_lec$finalPro_data)]
-```
-
 
 The variance for model GDP improved after transforming
 
@@ -161,6 +150,7 @@ library(astsa)
 arima_010 = sarima(GDP_ts, 0, 1, 0)
 ```
 Summary:
+
 - ARIMA(0,1,0) model fits the GDP time series pretty well
 - Residuals show no significant autocorrelation
 - Errors appear approximately normal
