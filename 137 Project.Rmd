@@ -19,6 +19,13 @@ library(MASS)
 load("finalproject.Rdata")
 ```
 
+# Data cleaning
+
+```{r}
+finalPro_data <- na.omit(finalPro_data)
+```
+
+
 # GDP Time Series
 
 ## Plot GDP Time Series & Observing
@@ -64,7 +71,7 @@ ACF:
   
 Ljung-test
 
-- p-value = 1.428e-12 (very small), this means the residuals are not independent.
+- p-value is very small, this means the residuals are not independent.
 
 
 ### Normality and Constant Variance
@@ -116,10 +123,10 @@ lambda_gdp <- bc$x[which.max(bc$y)]
 ```{r, echo=FALSE}
 # Refit using the Box-Cox transformed GDP
 # Formula: y(lambda) = (y^lambda - 1)/ lambda
-if(lambda == 0){
+if(lambda_gdp == 0){
   finalPro_data$GDP_boxcox <- log(finalPro_data$GDP)
 } else {
-  finalPro_data$GDP_boxcox <- (finalPro_data$GDP^lambda - 1)/lambda
+  finalPro_data$GDP_boxcox <- (finalPro_data$GDP^lambda_gdp - 1)/lambda_gdp
 }
 model_gdp_boxcox <- lm(GDP_boxcox ~ Year + Growth + CPI + Imports + Exports + Population, data = finalPro_data)
 
