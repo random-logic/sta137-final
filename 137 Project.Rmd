@@ -116,7 +116,11 @@ lambda_gdp <- bc$x[which.max(bc$y)]
 ```{r, echo=FALSE}
 # Refit using the Box-Cox transformed GDP
 # Formula: y(lambda) = (y^lambda - 1)/ lambda
-finalPro_data$GDP_boxcox <- ((finalPro_data$GDP^lambda_gdp) - 1) / lambda_gdp
+if(lambda == 0){
+  finalPro_data$GDP_boxcox <- log(finalPro_data$GDP)
+} else {
+  finalPro_data$GDP_boxcox <- (finalPro_data$GDP^lambda - 1)/lambda
+}
 model_gdp_boxcox <- lm(GDP_boxcox ~ Year + Growth + CPI + Imports + Exports + Population, data = finalPro_data)
 
 # Coefficients
@@ -248,3 +252,16 @@ arima_imports
 ```
 
 Suggested: ARIMA(0,1,2)
+
+# Save cleaned transformation
+
+```{r}
+# Remove GDP, Country, Code
+finalPro_data$GDP <- NULL
+finalPro_data$Country <- NULL
+finalPro_data$Code <- NULL
+
+# Save the updated data frame to CSV
+write.csv(finalPro_data, file = "finalPro_data_BoxCox.csv", row.names = FALSE)
+```
+
