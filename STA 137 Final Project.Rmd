@@ -272,3 +272,36 @@ finalPro_data$Code <- NULL
 write.csv(finalPro_data, file = "finalPro_data_BoxCox.csv", row.names = FALSE)
 ```
 
+# Imports Forecast
+
+```{r}
+# 5-year ahead forecast for Imports from Fitted ARIMA
+import_forecast <- forecast(arima_imports, h = 5)
+import_forecast
+
+# Plot of forecast alongside data
+plot(import_forecast,
+     main = "5-Year Forecast for Central African Republic Imports",
+     xlab = "Year",
+     ylab = "Imports in Millions $")
+```
+
+# Arima Residuals
+
+```{r}
+# Extract ARIMA residuals
+arima_res <- residuals(arima_imports)
+
+# Check for remaining autocorrelation
+acf(arima_res, main = "ACF of ARIMA Residuals")
+pacf(arima_res, main = "PACF of ARIMA Residuals")
+
+# Ljung–Box test
+Box.test(arima_res, lag = 20, type = "Ljung-Box")
+
+# Check normality
+qqnorm(arima_res); qqline(arima_res)
+shapiro.test(arima_res)
+```
+- No remaining autocorrelation beyond white noise
+- p value suggests that the residuals do not pass the normality check at the 5% significance level
