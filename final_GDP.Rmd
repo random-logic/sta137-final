@@ -167,3 +167,16 @@ cat("95% prediction interval: [", round(lower_original[1,2], 2), ",",
     round(upper_original[1,2], 2), "] million USD\n\n")
 cat("FINAL MODEL: ARIMA(0,1,0) for Box-Cox transformed GDP\n")
 ```
+
+# Forecasting the next 10 time periods
+```{r}
+forecast_horizon <- 10
+forecast_values <- forecast(final_model, h = forecast_horizon)
+
+# Plot the forecast
+autoplot(forecast_values) +
+  ggtitle("Forecast for GDP") +
+  xlab("Year") +
+  ylab("GDP") +
+  theme_minimal()
+```

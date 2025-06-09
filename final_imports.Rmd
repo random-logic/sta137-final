@@ -164,3 +164,17 @@ cat("95% prediction interval: [", round(lower_original[1,2], 2), ",",
     round(upper_original[1,2], 2), "] Imports\n\n")
 cat("FINAL MODEL: ARIMA(0,1,0) for Box-Cox transformed Imports\n")
 ```
+
+
+# Forecast next 10 periods using the best model
+```{r}
+forecast_horizon <- 10
+imports_forecast <- forecast(final_model, h = forecast_horizon)
+
+# Plot the forecast
+autoplot(imports_forecast) +
+  ggtitle("Forecast of Imports") +
+  xlab("Year") +
+  ylab("Imports") +
+  theme_minimal()
+```
