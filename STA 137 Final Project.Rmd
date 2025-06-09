@@ -14,25 +14,29 @@ library(ggplot2)
 library(astsa)
 library(forecast)
 library(MASS)
+library(dplyr)
+
 
 # Load data
 load("finalproject.Rdata")
 ```
 
-# Data cleaning
+# Data Cleaning
+
+Keep Year, Imports, and GDP columns
 
 ```{r}
-finalPro_data <- na.omit(finalPro_data)
+finalPro_data <- finalPro_data[, c("Year", "Imports", "GDP")]
 ```
 
 
-# GDP Time Series
+# I. GDP Time Series
 
-## Plot GDP Time Series & Observing
+## Plot GDP Time Series
 
 ```{r}
 # Plot GDP
-gdp_ts <- ts(finalPro_data$GDP, start = 1960, frequency = 1)
+gdp_ts <- ts(finalPro_data$GDP, start = 1960, frequency = 2)
 
 ts.plot(gdp_ts, main="GDP Time Series", ylab="GDP")
 ```
@@ -41,15 +45,53 @@ Summary:
 - GDP time series has upward trend, this shows this is non-stationary
 - It has peaks around every 10 year: 1980, 1990, 2010
 
+## Differencing GDP
+
+```{r}
+# 1st order difference
+diff_gdp <- diff(gdp_ts)
+
+ts.plot(diff_gdp, main="First Order Difference GDP Time Series", ylab="GDP")
+
+acf(diff_gdp)
+pacf(diff_gdp)
+
+```
+
+## Box-Cox Transformation
+
+```{r}
+# If there are negative/zero values, shift the series:
+min_val <- min(diff_gdp, na.rm = TRUE)
+if (min_val <= 0) {
+  gdp_diff_bc <- diff_gdp + abs(min_val) + 1
+} else {
+  gdp_diff_bc <- diff_gdp
+}
+
+# Find the best lambda for Box-Cox
+bc <- boxcox(gdp_diff_bc ~ 1, lambda = seq(-2, 2, by = 0.1))
+lambda <- bc$x[which.max(bc$y)]
+
+# Apply the transformation
+if (lambda == 0) {
+  gdp_diff_trans <- log(gdp_diff_bc)
+} else {
+  gdp_diff_trans <- (gdp_diff_bc^lambda - 1) / lambda
+}
+
+shapiro.test(gdp_diff_trans)
+```
+- new shapiro-wilk p-value is very small after differencing
+
+
 ## Diagnostic GDP 
 
 ### Coefficients 
 
 ```{r}
 # 
-model_gdp <- lm(GDP ~ Year + Growth + CPI + Imports + Exports + Population, data = finalPro_data)
-
-summary(model_gdp)
+model_gdp <- lm(GDP ~ Year, data = finalPro_data)
 ```
 (Note: default p-value = 0.1)
 
@@ -62,19 +104,16 @@ Significant: Year, CPI, Exports
 acf(gdp_ts, main = "ACF of GDP Time Series")
 
 #Ljung test
-Box.test(gdp_ts)
+#Box.test(gdp_ts)
 ```
 
 ACF:
 
-- ACF values are decreasing gradually and stay above significance bounds, this means the time series is non-stationary, it likely has trend
+ACF values are decreasing gradually and stay above significance bounds, this means the time series is non-stationary, it likely has trend
   
-Ljung-test
-
-- p-value is very small, this means the residuals are not independent.
 
 
-### Normality and Constant Variance
+### Check Normality and White Noise
 
 ```{r}
 resid_gdp <- residuals(model_gdp)
@@ -85,32 +124,24 @@ qqline(model_gdp$residuals)
 
 shapiro.test(resid_gdp) # Shapiro-Wilk test
 
-# Check constant variance
-plot(fitted(model_gdp), resid_gdp,
-     xlab = "Fitted values", ylab = "Residuals",
-     main = "Residuals vs Fitted")
-abline(h = 0, col = "red") # Residuals vs Fitted plot
-
-group <- ifelse(fitted(model_gdp) > median(fitted(model_gdp)), "High", "Low")
-leveneTest(resid_gdp ~ group, center=median)
+# Portmanteau Test (Ljung-Box)
+Box.test(resid_gdp, lag = 10, type = "Ljung-Box")
 ```
 Normality:
 
-- The residuals are close to the line, this means the data seems to meet normality
+Based on the QQ-plot for GDP time series, we see that there are most residuals are notclose to the line, which means the model might meet the assumption of normality. Then, we use Shapiro-Wilk test and got a p-value = 0.09966. Since the p-value is bigger than $\alpha = 0.05$, we conclude that our model for GDP is normally distributed.
 
-- Shapiro: p-value = 0.5794. This means the data met normality
 
-Constant Variance:
+Next, we use Portmanteau Test (Ljung-Box) to test whether residuals are white noise. The null hypothesis for this test is residuals are white noise. After running the test, we got p-value $< 2.2e-16$. Since p-value $< 0.05$, we conclude that residuals are not white noise. Thus, we will transform our data to make it stationary. 
 
-- Plot shows no patterns, this means the data seems to meet constant variance
 
-- Brown-Forsythe test: p-value = 0.01507 < 0.05. This means the data not met constant variance. Thus, transformation is needed.
+
 
 ## Box-Cox Transformation for GDP
 
 ```{r, include=FALSE}
 # Use boxcox for GDP model
-bc <- boxcox(model_gdp, lambda = seq(-2, 2, by = 0.1))
+bc <- boxcox(diff_gdp, lambda = seq(-2, 2, by = 0.1))
 
 # Find best lambda
 lambda_gdp <- bc$x[which.max(bc$y)]
@@ -128,13 +159,12 @@ if(lambda_gdp == 0){
 } else {
   finalPro_data$GDP_boxcox <- (finalPro_data$GDP^lambda_gdp - 1)/lambda_gdp
 }
-model_gdp_boxcox <- lm(GDP_boxcox ~ Year + Growth + CPI + Imports + Exports + Population, data = finalPro_data)
+model_gdp_boxcox <- lm(GDP_boxcox ~ Year, data = finalPro_data)
 
 # Coefficients
 summary(model_gdp_boxcox)
 ```
 
-Significant coefficients: Year, CPI, Exports, Population
 
 ```{r}
 # Normality box-cox
@@ -145,15 +175,6 @@ qqnorm(model_gdp_boxcox$residuals)
 qqline(model_gdp_boxcox$residuals)
 
 shapiro.test(resid_gdp_boxcox) # Shapiro-Wilk test
-
-# Check constant variance
-plot(fitted(model_gdp_boxcox), resid_gdp_boxcox,
-     xlab = "Fitted values", ylab = "Residuals",
-     main = "Residuals vs Fitted after Transforming")
-abline(h = 0, col = "red") # Residuals vs Fitted plot
-
-group_gdp_boxcox <- ifelse(fitted(model_gdp_boxcox) > median(fitted(model_gdp_boxcox)), "High", "Low")
-leveneTest(resid_gdp_boxcox ~ group_gdp_boxcox, center=median)
 
 ```
 Normality and Constant Variance:
@@ -169,7 +190,7 @@ arima_gdp
 Suggested: ARIMA(0,1,0)
 
 
-# Imports Time Series
+# II. Imports Time Series
 
 ## Plot Imports Time Series
 
@@ -258,7 +279,7 @@ arima_imports <- auto.arima(imports_ts)
 arima_imports
 ```
 
-Suggested: ARIMA(0,1,2)
+Suggested: ARIMA(0,1,0)
 
 # Save cleaned transformation
 
@@ -272,36 +293,3 @@ finalPro_data$Code <- NULL
 write.csv(finalPro_data, file = "finalPro_data_BoxCox.csv", row.names = FALSE)
 ```
 
-# Imports Forecast
-
-```{r}
-# 5-year ahead forecast for Imports from Fitted ARIMA
-import_forecast <- forecast(arima_imports, h = 5)
-import_forecast
-
-# Plot of forecast alongside data
-plot(import_forecast,
-     main = "5-Year Forecast for Central African Republic Imports",
-     xlab = "Year",
-     ylab = "Imports in Millions $")
-```
-
-# Arima Residuals
-
-```{r}
-# Extract ARIMA residuals
-arima_res <- residuals(arima_imports)
-
-# Check for remaining autocorrelation
-acf(arima_res, main = "ACF of ARIMA Residuals")
-pacf(arima_res, main = "PACF of ARIMA Residuals")
-
-# Ljung–Box test
-Box.test(arima_res, lag = 20, type = "Ljung-Box")
-
-# Check normality
-qqnorm(arima_res); qqline(arima_res)
-shapiro.test(arima_res)
-```
-- No remaining autocorrelation beyond white noise
-- p value suggests that the residuals do not pass the normality check at the 5% significance level
