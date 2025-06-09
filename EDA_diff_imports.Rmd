@@ -1,0 +1,95 @@
+---
+title: "STA 137 Final Project"
+author: "Andrew Jowe,"
+date: "2025-06-08"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r, include=FALSE}
+# Load library
+library(car)
+library(ggplot2)
+library(astsa)
+library(forecast)
+library(MASS)
+library(dplyr)
+
+
+# Load data
+load("finalproject.Rdata")
+```
+
+# Col Removal
+Keep Year, Imports, and Imports columns
+```{r}
+finalPro_data <- finalPro_data[, c("Year", "Imports")]
+```
+
+# Plot Time Series
+```{r}
+# Plot Imports
+imports_ts <- ts(finalPro_data$Imports, start = 1960, frequency = 2)
+
+ts.plot(imports_ts, main="Imports Time Series", ylab="Imports")
+```
+
+Summary:
+- Imports time series has upward trend, this shows this is non-stationary
+- It has peaks around every 10 year: 1980, 1990, 2010
+
+# Transform
+
+```{r}
+# Box-Cox transform Imports
+lambda <- BoxCox.lambda(imports_ts)
+boxcox_imports_ts <- log(imports_ts)
+ts.plot(boxcox_imports_ts, main = paste("Box-Cox Transformed Imports (lambda =", round(lambda, 3), ")"), ylab = "Transformed Imports")
+```
+
+We tried log, but residuals not normal.
+
+# Differencing Imports
+
+```{r}
+diff_imports_bc <- diff(boxcox_imports_ts)
+diff_imports_bc <- diff(diff_imports_bc)
+
+# Plot differenced Box-Cox Imports
+ts.plot(diff_imports_bc, main="Differenced Box-Cox Transformed Imports Time Series", ylab="Transformed Imports")
+```
+
+```{r}
+# Fit a basic linear model for demonstration
+model_imports_bc <- lm(diff_imports_bc ~ time(diff_imports_bc))
+resid_imports_bc <- residuals(model_imports_bc)
+
+# Plot ACF and PACF of residuals
+par(mfrow = c(1, 2))  # Side-by-side plots
+acf(resid_imports_bc, main = "ACF of Residuals")
+pacf(resid_imports_bc, main = "PACF of Residuals")
+par(mfrow = c(1, 1))  # Reset layout
+```
+
+```{r}
+# Portmanteau (Box-Pierce) test for white noise
+portmanteau_result <- Box.test(resid_imports_bc, lag = 10, type = "Box-Pierce")
+print(portmanteau_result)
+```
+
+# Assess Normality
+```{r}
+# Assess Normality of Residuals
+
+# Histogram
+hist(resid_imports_bc, breaks = 15, main = "Histogram of Residuals", xlab = "Residuals", col = "lightblue", border = "white")
+
+# Q-Q Plot
+qqnorm(resid_imports_bc, main = "Q-Q Plot of Residuals")
+qqline(resid_imports_bc, col = "red")
+
+# Shapiro-Wilk Test
+shapiro_test <- shapiro.test(resid_imports_bc)
+print(shapiro_test)
+```

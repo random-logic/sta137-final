@@ -24,7 +24,7 @@ load("finalproject.Rdata")
 # Col Removal
 Keep Year, Imports, and GDP columns
 ```{r}
-finalPro_data <- finalPro_data[, c("Year", "Imports", "GDP")]
+finalPro_data <- finalPro_data[, c("Year", "GDP")]
 ```
 
 # Plot Time Series
@@ -47,6 +47,7 @@ lambda <- BoxCox.lambda(gdp_ts)
 boxcox_gdp_ts <- BoxCox(gdp_ts, lambda)
 ts.plot(boxcox_gdp_ts, main = paste("Box-Cox Transformed GDP (lambda =", round(lambda, 3), ")"), ylab = "Transformed GDP")
 ```
+
 We tried log, but residuals not normal.
 
 # Differencing GDP
