@@ -30,7 +30,7 @@ finalPro_data <- finalPro_data[, c("Year", "Imports")]
 # Plot Time Series
 ```{r}
 # Plot Imports
-imports_ts <- ts(finalPro_data$Imports, start = 1960, frequency = 2)
+imports_ts <- ts(finalPro_data$Imports, start = 1960, frequency = 1)
 
 ts.plot(imports_ts, main="Imports Time Series", ylab="Imports")
 ```

@@ -1,0 +1,9 @@
+```{r}
+# Load the .RData file
+load("finalproject.Rdata")
+
+# List all objects loaded from the file
+ls()
+
+finalPro_data
+```

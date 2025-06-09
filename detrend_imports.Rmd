@@ -30,7 +30,7 @@ finalPro_data <- finalPro_data[, c("Year", "Imports")]
 # Plot Time Series
 ```{r}
 # Plot Imports
-imports_ts <- ts(finalPro_data$Imports, start = 1960, frequency = 2)
+imports_ts <- ts(finalPro_data$Imports, start = 1960, frequency = 1)
 
 ts.plot(imports_ts, main="Imports Time Series", ylab="Imports")
 ```
@@ -38,7 +38,7 @@ ts.plot(imports_ts, main="Imports Time Series", ylab="Imports")
 ```{r}
 # Apply Polynomial Detrending
 time_index <- 1:length(imports_ts)
-poly_trend_model <- lm(imports_ts ~ poly(time_index, 3))  # 3rd-degree polynomial trend
+poly_trend_model <- lm(imports_ts ~ poly(time_index, 2))  # 2rd-degree polynomial trend
 detrended_imports <- residuals(poly_trend_model)
 
 # Plot Detrended Imports
@@ -71,6 +71,8 @@ portmanteau_result <- Box.test(resid_imports_bc, lag = 10, type = "Box-Pierce")
 print(portmanteau_result)
 ```
 
+Violation of constant residuals, but it's ok because our final model is not reliant on these residuals from the linear model.
+
 # Assess Normality
 ```{r}
 # Assess Normality of Residuals
@@ -86,6 +88,8 @@ qqline(resid_imports_bc, col = "red")
 shapiro_test <- shapiro.test(resid_imports_bc)
 print(shapiro_test)
 ```
+
+The transformation did help with the normality fit, meaning it still helped.
 
 ```{r}
 # Save detrended imports data to CSV

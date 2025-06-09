@@ -30,7 +30,7 @@ finalPro_data <- finalPro_data[, c("Year", "GDP")]
 # Plot Time Series
 ```{r}
 # Plot GDP
-gdp_ts <- ts(finalPro_data$GDP, start = 1960, frequency = 2)
+gdp_ts <- ts(finalPro_data$GDP, start = 1960, frequency = 1)
 
 ts.plot(gdp_ts, main="GDP Time Series", ylab="GDP")
 ```
@@ -92,6 +92,8 @@ qqline(resid_gdp_bc, col = "red")
 shapiro_test <- shapiro.test(resid_gdp_bc)
 print(shapiro_test)
 ```
+
+This shows that differencing and transformation helped, but is not an evaluation of our final model.
 
 ```{r}
 # Save differenced GDP data to CSV
