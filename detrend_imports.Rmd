@@ -96,3 +96,41 @@ The transformation did help with the normality fit, meaning it still helped.
 write.csv(data.frame(Year = finalPro_data$Year, Detrended_Imports = detrended_imports),
           "detrended_imports.csv", row.names = FALSE)
 ```
+
+```{r}
+library(tseries)
+
+adf.test(imports_ts)               
+numdiff <- ndiffs(imports_ts)  # number of differences R recommends
+differenced_ts <- diff(imports_ts, numdiff)
+
+plot(differenced_ts, main=paste("Imports series differenced", nd, "times"))
+```
+
+```{r}
+ggAcf(differenced_ts) + ggtitle("ACF of Δ Imports Series")
+ggPacf(differenced_ts) + ggtitle("PACF of Δ Imports Series")
+```
+
+```{r}
+model011 <- Arima(imports_ts, order=c(0,nd,1))
+model110 <- Arima(imports_ts, order=c(1,nd,0))
+model111 <- Arima(imports_ts, order=c(1,nd,1))
+
+data.frame(
+  Model = c("ARIMA(0,1,1)","ARIMA(1,1,0)","ARIMA(1,1,1)"),
+  AICc = c(model011$aicc, model110$aicc, model111$aicc)
+)
+```
+
+```{r}
+best_model <- m111   # Model with lowest AICc
+checkresiduals(best_model)    # plots residual ACF + Ljung-Box
+```
+
+```{r}
+forecast_bestmodel <- forecast(best, h=10)     # 10 year forecast
+autoplot(forecast_bestmodel) +
+  ggtitle("10 year Forecast of Imports Series (best ARIMA)")
+forecast_bestmodel                           
+```
