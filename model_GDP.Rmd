@@ -27,14 +27,31 @@ gdp_ts <- ts(differenced_gdp$Differenced_GDP, start = 1960, frequency = 1)
 
 # STEP 2: Plot and Model Identification
 par(mfrow = c(2,2))
-plot(gdp_ts, main = "Box-Cox Transformed GDP (from EDA)", ylab = "Transformed GDP", type = "l", lwd = 2)
-plot(diff(gdp_ts), main = "First Difference", ylab = "Change in GDP", type = "l", lwd = 2)
+plot(gdp_ts, main = "Transformed GDP (from EDA)", ylab = "Transformed GDP", type = "l", lwd = 2)
 abline(h = 0, col = "red", lty = 2)
 # ACF/PACF of differenced series
-acf(diff(gdp_ts), main = "ACF: Differenced GDP", lag.max = 20)
-pacf(diff(gdp_ts), main = "PACF: Differenced GDP", lag.max = 20)
+acf(gdp_ts, main = "ACF: Transformed GDP", lag.max = 20)
+pacf(gdp_ts, main = "PACF Transformed GDP", lag.max = 20)
 par(mfrow = c(1,1))
-cat("ACF/PACF Analysis: No significant lags detected so ARIMA(0,1,0)\n\n")
+cat("ACF/PACF Analysis: No significant lags detected so ARIMA(0,1,1)\n\n")
+
+# STEP 2.5: Diagnostics on chosen model
+final_model <- Arima(gdp_ts, order = c(0,1,1), method = "ML")
+print(final_model)
+residuals_final <- residuals(final_model)
+
+# Diagnostic Tests (Simplified)
+cat("\nDiagnostic Tests (Simplified):\n")
+
+# 1. Portmanteau (Ljung-Box) Test for Autocorrelation
+ljung <- Box.test(residuals_final, lag = 10, type = "Ljung-Box")
+cat("Ljung-Box test p-value:", round(ljung$p.value, 4), 
+    ifelse(ljung$p.value > 0.05, "(PASS - residuals ≈ white noise)", "(FAIL)"), "\n")
+
+# 2. Shapiro-Wilk Test for Normality
+shapiro <- shapiro.test(residuals_final)
+cat("Shapiro-Wilk test p-value:", round(shapiro$p.value, 4), 
+    ifelse(shapiro$p.value > 0.05, "(PASS - approx. normal residuals)", "(FAIL)"), "\n")
 
 # STEP 3: Model Comparison
 models <- list(

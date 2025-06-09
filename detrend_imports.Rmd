@@ -101,10 +101,10 @@ write.csv(data.frame(Year = finalPro_data$Year, Detrended_Imports = detrended_im
 library(tseries)
 
 adf.test(imports_ts)               
-numdiff <- ndiffs(imports_ts)  # number of differences R recommends
-differenced_ts <- diff(imports_ts, numdiff)
+num_differences <- ndiffs(imports_ts)  # number of differences R recommends
+differenced_ts <- diff(imports_ts, num_differences)
 
-plot(differenced_ts, main=paste("Imports series differenced", nd, "times"))
+plot(differenced_ts, main=paste("Imports series differenced", num_differences, "times"))
 ```
 
 ```{r}
@@ -113,9 +113,9 @@ ggPacf(differenced_ts) + ggtitle("PACF of Δ Imports Series")
 ```
 
 ```{r}
-model011 <- Arima(imports_ts, order=c(0,nd,1))
-model110 <- Arima(imports_ts, order=c(1,nd,0))
-model111 <- Arima(imports_ts, order=c(1,nd,1))
+model011 <- Arima(imports_ts, order=c(0,num_differences,1))
+model110 <- Arima(imports_ts, order=c(1,num_differences,0))
+model111 <- Arima(imports_ts, order=c(1,num_differences,1))
 
 data.frame(
   Model = c("ARIMA(0,1,1)","ARIMA(1,1,0)","ARIMA(1,1,1)"),
@@ -124,12 +124,12 @@ data.frame(
 ```
 
 ```{r}
-best_model <- m111   # Model with lowest AICc
+best_model <- model111   # Model with lowest AICc
 checkresiduals(best_model)    # plots residual ACF + Ljung-Box
 ```
 
 ```{r}
-forecast_bestmodel <- forecast(best, h=10)     # 10 year forecast
+forecast_bestmodel <- forecast(best_model, h=10)     # 10 year forecast
 autoplot(forecast_bestmodel) +
   ggtitle("10 year Forecast of Imports Series (best ARIMA)")
 forecast_bestmodel                           
