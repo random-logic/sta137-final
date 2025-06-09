@@ -93,3 +93,5 @@ qqline(resid_imports_bc, col = "red")
 shapiro_test <- shapiro.test(resid_imports_bc)
 print(shapiro_test)
 ```
+
+This is the losing transformation, we did not successfully correct residual variance.
