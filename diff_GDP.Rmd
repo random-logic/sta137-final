@@ -92,3 +92,9 @@ qqline(resid_gdp_bc, col = "red")
 shapiro_test <- shapiro.test(resid_gdp_bc)
 print(shapiro_test)
 ```
+
+```{r}
+# Save differenced GDP data to CSV
+write.csv(data.frame(Year = finalPro_data$Year[-1], Differenced_GDP = diff_gdp_bc),
+          "differenced_gdp.csv", row.names = FALSE)
+```
