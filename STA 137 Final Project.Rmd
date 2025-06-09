@@ -23,7 +23,7 @@ load("finalproject.Rdata")
 
 # Data Cleaning
 
-Keep Year, Imports, and GDP columns
+Since we focus on GDP and Imports, we will keep Year, Imports, and GDP and drop other columns.
 
 ```{r}
 finalPro_data <- finalPro_data[, c("Year", "Imports", "GDP")]
@@ -34,165 +34,113 @@ finalPro_data <- finalPro_data[, c("Year", "Imports", "GDP")]
 
 ## Plot GDP Time Series
 
+We will plot the GDP time series to see whether the our data is consistent over time. 
+
 ```{r}
 # Plot GDP
 gdp_ts <- ts(finalPro_data$GDP, start = 1960, frequency = 2)
 
 ts.plot(gdp_ts, main="GDP Time Series", ylab="GDP")
 ```
-Summary:
 
-- GDP time series has upward trend, this shows this is non-stationary
-- It has peaks around every 10 year: 1980, 1990, 2010
+Based on the GDP time series, we see that the plot has upward trend and some peaks, showing economic growth over the period. This suggests that the data is not consistent. To have further analysis, we would transform and detrend the data to analyze fluctuation more clearly.
+
+## Transform (log)
+
+```{r}
+# Log transform GDP
+log_gdp_ts <- log(gdp_ts)
+ts.plot(log_gdp_ts, main="Log GDP Time Series", ylab="GDP")
+```
+
+## Detrend GDP
+
+```{r}
+# Detrend log-transformed GDP using linear regression
+time_index <- 1:length(log_gdp_ts)
+trend_model <- lm(log_gdp_ts ~ time_index)
+detrended_log_gdp <- residuals(trend_model)
+
+# Plot detrended log-GDP
+ts.plot(detrended_log_gdp, main = "Detrended Log GDP Time Series", ylab = "Detrended Log-GDP")
+```
+
+Didn't work, use differencing.
+
+## Transform (Box-Cox)
+
+Since the Imports time series is not consistent, we will use Box-Cox transformation to stabilize the data, which make it easier to work with by reducing big spikes.
+
+```{r}
+# Box-Cox transform GDP
+lambda <- BoxCox.lambda(gdp_ts)
+boxcox_gdp_ts <- BoxCox(gdp_ts, lambda)
+ts.plot(boxcox_gdp_ts, main = paste("Box-Cox Transformed GDP (lambda =", round(lambda, 3), ")"), ylab = "Transformed GDP")
+```
+
+Compared to the original GDP time series, the Box-Cox transformed series has stabilized the variance and made the trend more linear; we see don't see big spikes though there is still upward trend. Thus, the transformation works well and useful for further statistical analysis and modeling.
 
 ## Differencing GDP
 
-```{r}
-# 1st order difference
-diff_gdp <- diff(gdp_ts)
-
-ts.plot(diff_gdp, main="First Order Difference GDP Time Series", ylab="GDP")
-
-acf(diff_gdp)
-pacf(diff_gdp)
-
-```
-
-## Box-Cox Transformation
+Since our data is still non-stationary, we would take the first difference to make it into a more stationary.
 
 ```{r}
-# If there are negative/zero values, shift the series:
-min_val <- min(diff_gdp, na.rm = TRUE)
-if (min_val <= 0) {
-  gdp_diff_bc <- diff_gdp + abs(min_val) + 1
-} else {
-  gdp_diff_bc <- diff_gdp
-}
+diff_gdp_bc <- diff(boxcox_gdp_ts)
 
-# Find the best lambda for Box-Cox
-bc <- boxcox(gdp_diff_bc ~ 1, lambda = seq(-2, 2, by = 0.1))
-lambda <- bc$x[which.max(bc$y)]
-
-# Apply the transformation
-if (lambda == 0) {
-  gdp_diff_trans <- log(gdp_diff_bc)
-} else {
-  gdp_diff_trans <- (gdp_diff_bc^lambda - 1) / lambda
-}
-
-shapiro.test(gdp_diff_trans)
+# Plot differenced Box-Cox GDP
+ts.plot(diff_gdp_bc, main="Differenced Box-Cox Transformed GDP Time Series", ylab="Transformed GDP")
 ```
-- new shapiro-wilk p-value is very small after differencing
 
-
-## Diagnostic GDP 
-
-### Coefficients 
+After the first differencing, we see that the data appears more stationary, with changes fluctuating around a constant mean. However, there are still some periods with unusually large increases or decreases, suggesting the presence of significant economic events.
 
 ```{r}
-# 
-model_gdp <- lm(GDP ~ Year, data = finalPro_data)
+# Fit a basic linear model for demonstration
+model_gdp_bc <- lm(diff_gdp_bc ~ time(diff_gdp_bc))
+resid_gdp_bc <- residuals(model_gdp_bc)
+
+# Plot ACF and PACF of residuals
+par(mfrow = c(1, 2))  # Side-by-side plots
+acf(resid_gdp_bc, main = "ACF of Residuals")
+pacf(resid_gdp_bc, main = "PACF of Residuals")
+par(mfrow = c(1, 1))  # Reset layout
+
+# Portmanteau (Box-Pierce) test for white noise
+portmanteau_result <- Box.test(resid_gdp_bc, lag = 10, type = "Box-Pierce")
+print(portmanteau_result)
+
 ```
-(Note: default p-value = 0.1)
 
-Significant: Year, CPI, Exports
+To make sure the residuals are white noise, we plot ACF and PACF. The ACF shows that most of the spikes are below the blue line, which means there’s probably no strong pattern left, and the model already captured the main trends in the data. The spikes in the PACF also fall inside the blue line area, which suggests that we’ve captured most of the useful patterns.
 
-### Residuals
+We use Portmanteau Test to confirm whether residuals are white noise. The null hypothesis for this test is residuals are white noise. After running the test, we got p-value = 0.8434. Since p-value $> 0.05$, we conclude that residuals are white noise.
+
+## Assess Normality
 
 ```{r}
-# Residuals diagnostics for GDP
-acf(gdp_ts, main = "ACF of GDP Time Series")
+# Assess Normality of Residuals
 
-#Ljung test
-#Box.test(gdp_ts)
+# Histogram
+hist(resid_gdp_bc, breaks = 15, main = "Histogram of Residuals", xlab = "Residuals", col = "lightblue", border = "white")
+
+# Q-Q Plot
+qqnorm(resid_gdp_bc, main = "Q-Q Plot of Residuals")
+qqline(resid_gdp_bc, col = "red")
+
+# Shapiro-Wilk Test
+shapiro_test <- shapiro.test(resid_gdp_bc)
+print(shapiro_test)
 ```
 
-ACF:
+Based on the QQ-plot, we see that there are most residuals are close to the line, which means the model might meet the assumption of normality. Then, we use Shapiro-Wilk test and got a p-value = 0.05331. Since the p-value $> 0.05$, we conclude that our model for GDP is normally distributed.
 
-ACF values are decreasing gradually and stay above significance bounds, this means the time series is non-stationary, it likely has trend
-  
-
-
-### Check Normality and White Noise
-
-```{r}
-resid_gdp <- residuals(model_gdp)
-
-# Check normality
-qqnorm(model_gdp$residuals)
-qqline(model_gdp$residuals)
-
-shapiro.test(resid_gdp) # Shapiro-Wilk test
-
-# Portmanteau Test (Ljung-Box)
-Box.test(resid_gdp, lag = 10, type = "Ljung-Box")
-```
-Normality:
-
-Based on the QQ-plot for GDP time series, we see that there are most residuals are notclose to the line, which means the model might meet the assumption of normality. Then, we use Shapiro-Wilk test and got a p-value = 0.09966. Since the p-value is bigger than $\alpha = 0.05$, we conclude that our model for GDP is normally distributed.
-
-
-Next, we use Portmanteau Test (Ljung-Box) to test whether residuals are white noise. The null hypothesis for this test is residuals are white noise. After running the test, we got p-value $< 2.2e-16$. Since p-value $< 0.05$, we conclude that residuals are not white noise. Thus, we will transform our data to make it stationary. 
-
-
-
-
-## Box-Cox Transformation for GDP
-
-```{r, include=FALSE}
-# Use boxcox for GDP model
-bc <- boxcox(diff_gdp, lambda = seq(-2, 2, by = 0.1))
-
-# Find best lambda
-lambda_gdp <- bc$x[which.max(bc$y)]
-
-```
-
-### Diagnostic for Tranformation
-
-
-```{r, echo=FALSE}
-# Refit using the Box-Cox transformed GDP
-# Formula: y(lambda) = (y^lambda - 1)/ lambda
-if(lambda_gdp == 0){
-  finalPro_data$GDP_boxcox <- log(finalPro_data$GDP)
-} else {
-  finalPro_data$GDP_boxcox <- (finalPro_data$GDP^lambda_gdp - 1)/lambda_gdp
-}
-model_gdp_boxcox <- lm(GDP_boxcox ~ Year, data = finalPro_data)
-
-# Coefficients
-summary(model_gdp_boxcox)
-```
-
-
-```{r}
-# Normality box-cox
-resid_gdp_boxcox <- residuals(model_gdp_boxcox)
-
-# Check normality
-qqnorm(model_gdp_boxcox$residuals)
-qqline(model_gdp_boxcox$residuals)
-
-shapiro.test(resid_gdp_boxcox) # Shapiro-Wilk test
-
-```
-Normality and Constant Variance:
-
-- Both assumptions are met after transforming
-
-## Find the best ARIMA model for GDP Using auto.arima()
-
-```{r}
-arima_gdp <- auto.arima(gdp_ts)
-arima_gdp
-```
-Suggested: ARIMA(0,1,0)
+In conclusion, we would use GDP time series after using Box-Cox transformation and first differencing to do model selection for GDP and have further analyzed based on that.
 
 
 # II. Imports Time Series
 
 ## Plot Imports Time Series
+
+We will plot the Imports time series to see whether the our data is consistent over time. 
 
 ```{r}
 # Plot imports
@@ -201,95 +149,96 @@ imports_ts <- ts(finalPro_data$Imports, start = 1960, frequency = 1)
 ts.plot(imports_ts, main="Imports Time Series", ylab="Imports")
 ```
 
-Summary:
+Based on the Imports time series, we see that the plot has downward trend. Until around 2005, the trend goes upward. This suggests that the data is not consistent and there is no regular pattern . To have further analysis, we would transform and detrend the data to analyze the series more clearly.
 
-- The plot shows there is downward trend from 1960 to 2005, and increasing after that
 
-- This means the Imports time series is non-stationary
-
-## Diagnostics Imports
-
-### Coefficients
+## Transform (log)
 
 ```{r}
-model_imports <- lm(Imports ~ Year + Growth + CPI + GDP + Exports + Population, data = finalPro_data)
-
-summary(model_imports)
-```
-Significant: CPI, Exports
-
-### Residuals
-
-```{r}
-# Residuals diagnostics for Imports
-acf(imports_ts, main = "ACF of Imports Time Series")
-
-#Ljung test
-Box.test(imports_ts)
+# Log transform Imports
+log_imports_ts <- log(imports_ts)
+ts.plot(log_imports_ts, main="Log Imports Time Series", ylab="Imports")
 ```
 
-ACF:
-
-- ACF values decrease gradually and stay above significance bounds, this means the time series is non-stationary
-
-Ljung test:
-
-- p-value = 7.46e-11, this means the residuals are not independent
-
-
-### Normality and Constant Variance
+## Detrend Imports
 
 ```{r}
-resid_imports <- residuals(model_imports)
+# Detrend log-transformed Imports using linear regression
+time_index_imports <- 1:length(log_imports_ts)
+trend_model_imports <- lm(log_imports_ts ~ time_index_imports)
+detrended_log_imports <- residuals(trend_model_imports)
 
-# Check normality
-qqnorm(model_imports$residuals)
-qqline(model_imports$residuals)
-
-shapiro.test(resid_imports) # Shapiro-Wilk test
-
-# Check constant variance
-plot(fitted(model_imports), resid_imports,
-     xlab = "Fitted values", ylab = "Residuals",
-     main = "Residuals vs Fitted")
-abline(h = 0, col = "red") # Residuals vs Fitted plot
-
-group_imports <- ifelse(fitted(model_imports) > median(fitted(model_imports)), "High", "Low")
-leveneTest(resid_imports ~ group_imports, center=median)
+# Plot detrended log-Imports
+ts.plot(detrended_log_imports, main = "Detrended Log Imports Time Series", ylab = "Detrended Log-Imports")
 ```
 
-Normality:
+Didn't work, use differencing
 
-- Most residuals are close to the line except some points at the right end of the plot. The data might meet normality
+## Box-Cox Transform for Imports
 
-- Shapiro test: p-value = 0.1748. This means the data met normality
-
-Constant Variance:
-
-- The plot shows some patterns; most points are at the left side and waving pattern. This means the data might not meet constant variance
-
-- Brown test: 0.07019 > 0.05. This means the data met constant variance
-
-Thus, there is no needed for transforming Imports model.
-
-## Find the Best ARIMA Model for Imports Using auto.arima()
+Since the Imports time series is not consistent, we will use Box-Cox transformation to stabilize the data.
 
 ```{r}
-arima_imports <- auto.arima(imports_ts)
-arima_imports
+# Box-Cox transform Imports
+lambda_imports <- BoxCox.lambda(imports_ts)
+boxcox_imports_ts <- BoxCox(imports_ts, lambda_imports)
+ts.plot(boxcox_imports_ts, main = paste("Box-Cox Transformed Imports (lambda =", round(lambda_imports, 3), ")"), ylab = "Transformed Imports")
 ```
 
-Suggested: ARIMA(0,1,0)
 
-# Save cleaned transformation
+
+## Differencing Imports
+
+Since our data is non-stationary, we would take the first difference to make it into a more stationary.
 
 ```{r}
-# Remove GDP, Country, Code
-finalPro_data$GDP <- NULL
-finalPro_data$Country <- NULL
-finalPro_data$Code <- NULL
+diff_imports_bc <- diff(boxcox_imports_ts)
 
-# Save the updated data frame to CSV
-write.csv(finalPro_data, file = "finalPro_data_BoxCox.csv", row.names = FALSE)
+# Plot differenced Box-Cox Imports
+ts.plot(diff_imports_bc, main="Differenced Box-Cox Transformed Imports Time Series", ylab="Transformed Imports")
+```
+
+```{r}
+# Fit a basic linear model for demonstration
+model_imports_bc <- lm(diff_imports_bc ~ time(diff_imports_bc))
+resid_imports_bc <- residuals(model_imports_bc)
+
+# Plot ACF and PACF of residuals
+par(mfrow = c(1, 2))  # Side-by-side plots
+acf(resid_imports_bc, main = "ACF of Residuals")
+pacf(resid_imports_bc, main = "PACF of Residuals")
+par(mfrow = c(1, 1))  # Reset layout
+
+
+# Portmanteau (Box-Pierce) test for white noise
+portmanteau_result_imports <- Box.test(resid_imports_bc, lag = 10, type = "Box-Pierce")
+print(portmanteau_result_imports)
+
+```
+(Interpret later)
+
+
+## Assess Normality
+```{r}
+# Assess Normality of Residuals
+
+# Histogram
+hist(resid_imports_bc, breaks = 15, main = "Histogram of Residuals", xlab = "Residuals", col = "lightblue", border = "white")
+
+# Q-Q Plot
+qqnorm(resid_imports_bc, main = "Q-Q Plot of Residuals")
+qqline(resid_imports_bc, col = "red")
+
+# Shapiro-Wilk Test
+shapiro_test_imports <- shapiro.test(resid_imports_bc)
+print(shapiro_test_imports)
+```
+The data met normality assumption
+
+
+# Update csv. file that contains 3 columns
+
+```{r}
+write.csv(finalPro_data, file = "finalPro_data_update.csv", row.names = FALSE)
 ```
 
