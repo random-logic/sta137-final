@@ -1,0 +1,63 @@
+---
+title: "STA 137 Final Project"
+author: "Andrew Jowe,"
+date: "2025-06-08"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r, include=FALSE}
+# Load library
+library(car)
+library(ggplot2)
+library(astsa)
+library(forecast)
+library(MASS)
+library(dplyr)
+
+
+# Load data
+load("finalproject.Rdata")
+```
+
+# Col Removal
+Keep Year, Imports, and GDP columns
+```{r}
+finalPro_data <- finalPro_data[, c("Year", "Imports", "GDP")]
+```
+
+# Plot Time Series
+```{r}
+# Plot GDP
+gdp_ts <- ts(finalPro_data$GDP, start = 1960, frequency = 2)
+
+ts.plot(gdp_ts, main="GDP Time Series", ylab="GDP")
+```
+
+# Transform
+
+```{r}
+# Log transform GDP
+log_gdp_ts <- log(gdp_ts)
+ts.plot(gdp_ts, main="Log GDP Time Series", ylab="GDP")
+```
+
+Summary:
+
+- GDP time series has upward trend, this shows this is non-stationary
+- It has peaks around every 10 year: 1980, 1990, 2010
+
+# Detrend GDP
+
+```{r}
+# Detrend log-transformed GDP using linear regression
+time_index <- 1:length(log_gdp_ts)
+trend_model <- lm(log_gdp_ts ~ time_index)
+detrended_log_gdp <- residuals(trend_model)
+
+# Plot detrended log-GDP
+ts.plot(detrended_log_gdp, main = "Detrended Log GDP Time Series", ylab = "Detrended Log-GDP")
+```
+
+Didn't work, use differencing.

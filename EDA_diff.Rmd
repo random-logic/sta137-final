@@ -1,0 +1,93 @@
+---
+title: "STA 137 Final Project"
+author: "Andrew Jowe,"
+date: "2025-06-08"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r, include=FALSE}
+# Load library
+library(car)
+library(ggplot2)
+library(astsa)
+library(forecast)
+library(MASS)
+library(dplyr)
+
+
+# Load data
+load("finalproject.Rdata")
+```
+
+# Col Removal
+Keep Year, Imports, and GDP columns
+```{r}
+finalPro_data <- finalPro_data[, c("Year", "Imports", "GDP")]
+```
+
+# Plot Time Series
+```{r}
+# Plot GDP
+gdp_ts <- ts(finalPro_data$GDP, start = 1960, frequency = 2)
+
+ts.plot(gdp_ts, main="GDP Time Series", ylab="GDP")
+```
+
+Summary:
+- GDP time series has upward trend, this shows this is non-stationary
+- It has peaks around every 10 year: 1980, 1990, 2010
+
+# Transform
+
+```{r}
+# Box-Cox transform GDP
+lambda <- BoxCox.lambda(gdp_ts)
+boxcox_gdp_ts <- BoxCox(gdp_ts, lambda)
+ts.plot(boxcox_gdp_ts, main = paste("Box-Cox Transformed GDP (lambda =", round(lambda, 3), ")"), ylab = "Transformed GDP")
+```
+We tried log, but residuals not normal.
+
+# Differencing GDP
+
+```{r}
+diff_gdp_bc <- diff(boxcox_gdp_ts)
+
+# Plot differenced Box-Cox GDP
+ts.plot(diff_gdp_bc, main="Differenced Box-Cox Transformed GDP Time Series", ylab="Transformed GDP")
+```
+
+```{r}
+# Fit a basic linear model for demonstration
+model_gdp_bc <- lm(diff_gdp_bc ~ time(diff_gdp_bc))
+resid_gdp_bc <- residuals(model_gdp_bc)
+
+# Plot ACF and PACF of residuals
+par(mfrow = c(1, 2))  # Side-by-side plots
+acf(resid_gdp_bc, main = "ACF of Residuals")
+pacf(resid_gdp_bc, main = "PACF of Residuals")
+par(mfrow = c(1, 1))  # Reset layout
+```
+
+```{r}
+# Portmanteau (Box-Pierce) test for white noise
+portmanteau_result <- Box.test(resid_gdp_bc, lag = 10, type = "Box-Pierce")
+print(portmanteau_result)
+```
+
+# Assess Normality
+```{r}
+# Assess Normality of Residuals
+
+# Histogram
+hist(resid_gdp_bc, breaks = 15, main = "Histogram of Residuals", xlab = "Residuals", col = "lightblue", border = "white")
+
+# Q-Q Plot
+qqnorm(resid_gdp_bc, main = "Q-Q Plot of Residuals")
+qqline(resid_gdp_bc, col = "red")
+
+# Shapiro-Wilk Test
+shapiro_test <- shapiro.test(resid_gdp_bc)
+print(shapiro_test)
+```
