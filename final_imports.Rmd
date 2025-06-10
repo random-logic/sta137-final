@@ -61,6 +61,17 @@ diff_imports_bc <- diff(boxcox_imports_ts, differences=2)
 ts.plot(diff_imports_bc, main="Differenced Box-Cox Transformed Imports Time Series", ylab="Transformed Imports")
 ```
 
+# Root test for stationarity check
+```{r}
+# Load tseries for ADF test
+library(tseries)
+
+# Augmented Dickey-Fuller Test
+adf_result <- adf.test(diff_imports_bc)
+cat("ADF test p-value:", round(adf_result$p.value, 4), 
+    ifelse(adf_result$p.value < 0.05, "(PASS - Stationary)", "(FAIL - Non-stationary)"), "\n")
+```
+
 # ACF / PACF plots
 ```{r}
 # ACF and PACF of the transformed and differenced series

@@ -49,15 +49,22 @@ boxcox_gdp_ts <- BoxCox(gdp_ts, lambda)
 ts.plot(boxcox_gdp_ts, main = paste("Box-Cox Transformed GDP (lambda =", round(lambda, 3), ")"), ylab = "Transformed GDP")
 ```
 
-We tried log, but residuals not normal.
-
 # Differencing GDP
 
 ```{r}
-diff_gdp_bc <- diff(boxcox_gdp_ts)
+diff_gdp_bc <- diff(boxcox_gdp_ts, difference = 2)
 
 # Plot differenced Box-Cox GDP
 ts.plot(diff_gdp_bc, main="Differenced Box-Cox Transformed GDP Time Series", ylab="Transformed GDP")
+```
+
+# Root test for stationarity check
+```{r}
+# Augmented Dickey-Fuller Test (Unit Root Test) on differenced Box-Cox GDP
+library(tseries)
+adf_result <- adf.test(diff_gdp_bc)
+cat("ADF Test p-value:", round(adf_result$p.value, 4), 
+    ifelse(adf_result$p.value < 0.05, "(PASS - Stationary)", "(FAIL - Non-stationary)"), "\n")
 ```
 
 # ACF / PACF plots
@@ -75,7 +82,7 @@ par(mfrow = c(1, 1))
 # Author: Om C
 
 # Diagnostics on chosen model
-final_model <- Arima(boxcox_gdp_ts, order = c(0,1,0), method = "ML")
+final_model <- Arima(boxcox_gdp_ts, order = c(1, 2, 2), method = "ML")
 print(final_model)
 residuals_final <- residuals(final_model)
 
@@ -100,17 +107,13 @@ cat("Shapiro-Wilk test p-value:", round(shapiro$p.value, 4),
     ifelse(shapiro$p.value > 0.05, "(PASS - approx. normal residuals)", "(FAIL)"), "\n")
 
 # STEP 3: Model Comparison
-models <- list(
-  "ARIMA(0,1,0)" = c(0,1,0), # This implies a random walk, which is obviously an underfit for our model
-  "ARIMA(1,1,0)" = c(1,1,0),
-  "ARIMA(0,1,1)" = c(0,1,1),
-  "ARIMA(1,1,1)" = c(1,1,1),
-  "ARIMA(2,1,0)" = c(2,1,0),
-  "ARIMA(2,1,1)" = c(2,1,1),
-  "ARIMA(2,1,2)" = c(2,1,2),
-  "ARIMA(1,1,2)" = c(1,1,2),
-  "ARIMA(0,1,2)" = c(0,1,2)
-)
+models <- list()
+for (p in 0:2) {
+  for (q in 0:4) {
+    name <- paste0("ARIMA(", p, ",", 2, ",", q, ")")
+    models[[name]] <- c(p, 2, q)
+  }
+}
 results <- data.frame(Model=character(), AIC=numeric(), BIC=numeric(), 
                      Ljung_Box_p=numeric(), stringsAsFactors=FALSE)
 
@@ -129,7 +132,7 @@ print(results)
 cat("\nBest model by AIC:", results$Model[which.min(results$AIC)], "\n")
 
 # STEP 4: Final Model and Diagnostics
-final_model <- Arima(boxcox_gdp_ts, order = c(1,1,1), method = "ML")
+final_model <- Arima(boxcox_gdp_ts, order = c(0, 2, 1), method = "ML")
 print(final_model)
 residuals_final <- residuals(final_model)
 

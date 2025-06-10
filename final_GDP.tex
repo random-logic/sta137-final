@@ -152,13 +152,11 @@ non-stationary - It has peaks around every 10 year: 1980, 1990, 2010
 
 \pandocbounded{\includegraphics[keepaspectratio]{final_GDP_files/figure-latex/unnamed-chunk-4-1.pdf}}
 
-We tried log, but residuals not normal.
-
 \section{Differencing GDP}\label{differencing-gdp}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{diff\_gdp\_bc }\OtherTok{\textless{}{-}} \FunctionTok{diff}\NormalTok{(boxcox\_gdp\_ts)}
+\NormalTok{diff\_gdp\_bc }\OtherTok{\textless{}{-}} \FunctionTok{diff}\NormalTok{(boxcox\_gdp\_ts, }\AttributeTok{difference =} \DecValTok{2}\NormalTok{)}
 
 \CommentTok{\# Plot differenced Box{-}Cox GDP}
 \FunctionTok{ts.plot}\NormalTok{(diff\_gdp\_bc, }\AttributeTok{main=}\StringTok{"Differenced Box{-}Cox Transformed GDP Time Series"}\NormalTok{, }\AttributeTok{ylab=}\StringTok{"Transformed GDP"}\NormalTok{)}
@@ -166,6 +164,47 @@ We tried log, but residuals not normal.
 \end{Shaded}
 
 \pandocbounded{\includegraphics[keepaspectratio]{final_GDP_files/figure-latex/unnamed-chunk-5-1.pdf}}
+
+\section{Root test for stationarity
+check}\label{root-test-for-stationarity-check}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Augmented Dickey{-}Fuller Test (Unit Root Test) on differenced Box{-}Cox GDP}
+\FunctionTok{library}\NormalTok{(tseries)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##     'tseries' version: 0.10-58
+## 
+##     'tseries' is a package for time series analysis and computational
+##     finance.
+## 
+##     See 'library(help="tseries")' for details.
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{adf\_result }\OtherTok{\textless{}{-}} \FunctionTok{adf.test}\NormalTok{(diff\_gdp\_bc)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning in adf.test(diff_gdp_bc): p-value smaller than printed p-value
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{cat}\NormalTok{(}\StringTok{"ADF Test p{-}value:"}\NormalTok{, }\FunctionTok{round}\NormalTok{(adf\_result}\SpecialCharTok{$}\NormalTok{p.value, }\DecValTok{4}\NormalTok{), }
+    \FunctionTok{ifelse}\NormalTok{(adf\_result}\SpecialCharTok{$}\NormalTok{p.value }\SpecialCharTok{\textless{}} \FloatTok{0.05}\NormalTok{, }\StringTok{"(PASS {-} Stationary)"}\NormalTok{, }\StringTok{"(FAIL {-} Non{-}stationary)"}\NormalTok{), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## ADF Test p-value: 0.01 (PASS - Stationary)
+\end{verbatim}
 
 \section{ACF / PACF plots}\label{acf-pacf-plots}
 
@@ -178,7 +217,7 @@ We tried log, but residuals not normal.
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{final_GDP_files/figure-latex/unnamed-chunk-6-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{final_GDP_files/figure-latex/unnamed-chunk-7-1.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -194,17 +233,22 @@ We tried log, but residuals not normal.
 \CommentTok{\# Author: Om C}
 
 \CommentTok{\# Diagnostics on chosen model}
-\NormalTok{final\_model }\OtherTok{\textless{}{-}} \FunctionTok{Arima}\NormalTok{(boxcox\_gdp\_ts, }\AttributeTok{order =} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{0}\NormalTok{), }\AttributeTok{method =} \StringTok{"ML"}\NormalTok{)}
+\NormalTok{final\_model }\OtherTok{\textless{}{-}} \FunctionTok{Arima}\NormalTok{(boxcox\_gdp\_ts, }\AttributeTok{order =} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\DecValTok{2}\NormalTok{, }\DecValTok{2}\NormalTok{), }\AttributeTok{method =} \StringTok{"ML"}\NormalTok{)}
 \FunctionTok{print}\NormalTok{(final\_model)}
 \end{Highlighting}
 \end{Shaded}
 
 \begin{verbatim}
 ## Series: boxcox_gdp_ts 
-## ARIMA(0,1,0) 
+## ARIMA(1,2,2) 
 ## 
-## sigma^2 = 4.727e-06:  log likelihood = 271.1
-## AIC=-540.2   AICc=-540.12   BIC=-538.15
+## Coefficients:
+##           ar1     ma1      ma2
+##       -0.8512  0.0886  -0.9114
+## s.e.   0.0791  0.0838   0.0817
+## 
+## sigma^2 = 4.465e-06:  log likelihood = 271.29
+## AIC=-534.58   AICc=-533.79   BIC=-526.48
 \end{verbatim}
 
 \begin{Shaded}
@@ -218,7 +262,7 @@ We tried log, but residuals not normal.
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{final_GDP_files/figure-latex/unnamed-chunk-7-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{final_GDP_files/figure-latex/unnamed-chunk-8-1.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -244,7 +288,7 @@ We tried log, but residuals not normal.
 \end{Shaded}
 
 \begin{verbatim}
-## Ljung-Box test p-value: 0.8095 (PASS - residuals approx white noise)
+## Ljung-Box test p-value: 0.9839 (PASS - residuals approx white noise)
 \end{verbatim}
 
 \begin{Shaded}
@@ -258,23 +302,19 @@ We tried log, but residuals not normal.
 \end{Shaded}
 
 \begin{verbatim}
-## Shapiro-Wilk test p-value: 0.0449 (FAIL)
+## Shapiro-Wilk test p-value: 0.0311 (FAIL)
 \end{verbatim}
 
 \begin{Shaded}
 \begin{Highlighting}[]
 \CommentTok{\# STEP 3: Model Comparison}
-\NormalTok{models }\OtherTok{\textless{}{-}} \FunctionTok{list}\NormalTok{(}
-  \StringTok{"ARIMA(0,1,0)"} \OtherTok{=} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{0}\NormalTok{), }\CommentTok{\# This implies a random walk, which is obviously an underfit for our model}
-  \StringTok{"ARIMA(1,1,0)"} \OtherTok{=} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{0}\NormalTok{),}
-  \StringTok{"ARIMA(0,1,1)"} \OtherTok{=} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{),}
-  \StringTok{"ARIMA(1,1,1)"} \OtherTok{=} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{),}
-  \StringTok{"ARIMA(2,1,0)"} \OtherTok{=} \FunctionTok{c}\NormalTok{(}\DecValTok{2}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{0}\NormalTok{),}
-  \StringTok{"ARIMA(2,1,1)"} \OtherTok{=} \FunctionTok{c}\NormalTok{(}\DecValTok{2}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{),}
-  \StringTok{"ARIMA(2,1,2)"} \OtherTok{=} \FunctionTok{c}\NormalTok{(}\DecValTok{2}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{2}\NormalTok{),}
-  \StringTok{"ARIMA(1,1,2)"} \OtherTok{=} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{2}\NormalTok{),}
-  \StringTok{"ARIMA(0,1,2)"} \OtherTok{=} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{2}\NormalTok{)}
-\NormalTok{)}
+\NormalTok{models }\OtherTok{\textless{}{-}} \FunctionTok{list}\NormalTok{()}
+\ControlFlowTok{for}\NormalTok{ (p }\ControlFlowTok{in} \DecValTok{0}\SpecialCharTok{:}\DecValTok{2}\NormalTok{) \{}
+  \ControlFlowTok{for}\NormalTok{ (q }\ControlFlowTok{in} \DecValTok{0}\SpecialCharTok{:}\DecValTok{4}\NormalTok{) \{}
+\NormalTok{    name }\OtherTok{\textless{}{-}} \FunctionTok{paste0}\NormalTok{(}\StringTok{"ARIMA("}\NormalTok{, p, }\StringTok{","}\NormalTok{, }\DecValTok{2}\NormalTok{, }\StringTok{","}\NormalTok{, q, }\StringTok{")"}\NormalTok{)}
+\NormalTok{    models[[name]] }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(p, }\DecValTok{2}\NormalTok{, q)}
+\NormalTok{  \}}
+\NormalTok{\}}
 \NormalTok{results }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{Model=}\FunctionTok{character}\NormalTok{(), }\AttributeTok{AIC=}\FunctionTok{numeric}\NormalTok{(), }\AttributeTok{BIC=}\FunctionTok{numeric}\NormalTok{(), }
                      \AttributeTok{Ljung\_Box\_p=}\FunctionTok{numeric}\NormalTok{(), }\AttributeTok{stringsAsFactors=}\ConstantTok{FALSE}\NormalTok{)}
 
@@ -293,16 +333,22 @@ We tried log, but residuals not normal.
 \end{Shaded}
 
 \begin{verbatim}
-##          Model       AIC       BIC Ljung_Box_p
-## 1 ARIMA(0,1,0) -540.1976 -538.1545   0.8094629
-## 2 ARIMA(1,1,0) -541.3535 -537.2674   0.7596909
-## 3 ARIMA(0,1,1) -540.4525 -536.3664   0.8245419
-## 4 ARIMA(1,1,1) -545.1549 -539.0258   0.8881498
-## 5 ARIMA(2,1,0) -542.1543 -536.0251   0.7249147
-## 6 ARIMA(2,1,1) -543.1641 -534.9919   0.8832207
-## 7 ARIMA(2,1,2) -543.9988 -533.7835   0.9470827
-## 8 ARIMA(1,1,2) -543.1627 -534.9904   0.8840160
-## 9 ARIMA(0,1,2) -540.1068 -533.9777   0.7867186
+##           Model       AIC       BIC Ljung_Box_p
+## 1  ARIMA(0,2,0) -506.4846 -504.4592  0.04069592
+## 2  ARIMA(0,2,1) -535.6652 -531.6145  0.97908789
+## 3  ARIMA(0,2,2) -533.6924 -527.6164  0.97884201
+## 4  ARIMA(0,2,3) -531.9552 -523.8538  0.98648399
+## 5  ARIMA(0,2,4) -531.5969 -521.4702  0.99665452
+## 6  ARIMA(1,2,0) -521.7782 -517.7275  0.49432040
+## 7  ARIMA(1,2,1) -533.6969 -527.6209  0.97878514
+## 8  ARIMA(1,2,2) -534.5780 -526.4766  0.98388448
+## 9  ARIMA(1,2,3) -530.7228 -520.5960  0.99089452
+## 10 ARIMA(1,2,4) -532.2902 -520.1381  0.99807210
+## 11 ARIMA(2,2,0) -528.4717 -522.3956  0.96046777
+## 12 ARIMA(2,2,1) -532.0136 -523.9122  0.98466028
+## 13 ARIMA(2,2,2) -530.5183 -520.3915  0.98708052
+## 14 ARIMA(2,2,3) -530.7839 -518.6318  0.98015585
+## 15 ARIMA(2,2,4) -530.7115 -516.5340  0.99782349
 \end{verbatim}
 
 \begin{Shaded}
@@ -314,28 +360,28 @@ We tried log, but residuals not normal.
 
 \begin{verbatim}
 ## 
-## Best model by AIC: ARIMA(1,1,1)
+## Best model by AIC: ARIMA(0,2,1)
 \end{verbatim}
 
 \begin{Shaded}
 \begin{Highlighting}[]
 \CommentTok{\# STEP 4: Final Model and Diagnostics}
-\NormalTok{final\_model }\OtherTok{\textless{}{-}} \FunctionTok{Arima}\NormalTok{(boxcox\_gdp\_ts, }\AttributeTok{order =} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{), }\AttributeTok{method =} \StringTok{"ML"}\NormalTok{)}
+\NormalTok{final\_model }\OtherTok{\textless{}{-}} \FunctionTok{Arima}\NormalTok{(boxcox\_gdp\_ts, }\AttributeTok{order =} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{2}\NormalTok{, }\DecValTok{1}\NormalTok{), }\AttributeTok{method =} \StringTok{"ML"}\NormalTok{)}
 \FunctionTok{print}\NormalTok{(final\_model)}
 \end{Highlighting}
 \end{Shaded}
 
 \begin{verbatim}
 ## Series: boxcox_gdp_ts 
-## ARIMA(1,1,1) 
+## ARIMA(0,2,1) 
 ## 
 ## Coefficients:
-##          ar1      ma1
-##       0.9603  -0.8459
-## s.e.  0.0808   0.1707
+##           ma1
+##       -0.9024
+## s.e.   0.0771
 ## 
-## sigma^2 = 4.215e-06:  log likelihood = 275.58
-## AIC=-545.15   AICc=-544.7   BIC=-539.03
+## sigma^2 = 4.599e-06:  log likelihood = 269.83
+## AIC=-535.67   AICc=-535.44   BIC=-531.61
 \end{verbatim}
 
 \begin{Shaded}
@@ -349,7 +395,7 @@ We tried log, but residuals not normal.
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{final_GDP_files/figure-latex/unnamed-chunk-7-2.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{final_GDP_files/figure-latex/unnamed-chunk-8-2.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -374,7 +420,7 @@ We tried log, but residuals not normal.
 \end{Shaded}
 
 \begin{verbatim}
-## Ljung-Box test p-value: 0.8881 (PASS)
+## Ljung-Box test p-value: 0.9791 (PASS)
 \end{verbatim}
 
 \begin{Shaded}
@@ -388,7 +434,7 @@ We tried log, but residuals not normal.
 \end{Shaded}
 
 \begin{verbatim}
-## Shapiro-Wilk test p-value: 0.0288 (FAIL)
+## Shapiro-Wilk test p-value: 0.0056 (FAIL)
 \end{verbatim}
 
 \begin{Shaded}
@@ -401,7 +447,7 @@ We tried log, but residuals not normal.
 \end{Shaded}
 
 \begin{verbatim}
-## ARCH test p-value: 0.6157 (PASS)
+## ARCH test p-value: 0.8449 (PASS)
 \end{verbatim}
 
 \begin{Shaded}
@@ -450,7 +496,7 @@ We tried log, but residuals not normal.
 \end{Shaded}
 
 \begin{verbatim}
-## 95% prediction interval: [ 50.52 , 50.8 ] million USD
+## 95% prediction interval: [ 50.52 , 50.81 ] million USD
 \end{verbatim}
 
 \begin{Shaded}
@@ -488,6 +534,6 @@ periods}\label{forecasting-the-next-10-time-periods}
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{final_GDP_files/figure-latex/unnamed-chunk-8-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{final_GDP_files/figure-latex/unnamed-chunk-9-1.pdf}}
 
 \end{document}
