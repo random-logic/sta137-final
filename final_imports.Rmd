@@ -34,7 +34,9 @@ finalPro_data <- finalPro_data[, c("Year", "Imports")]
 # Plot Imports
 imports_ts <- ts(finalPro_data$Imports, start = 1960, frequency = 1)
 
+png("fig/imports/imports_ts.png", width = 800, height = 400)
 ts.plot(imports_ts, main="Imports Time Series", ylab="Imports")
+dev.off()
 ```
 
 Summary:
@@ -47,7 +49,9 @@ Summary:
 # Box-Cox transform Imports
 lambda <- BoxCox.lambda(imports_ts)
 boxcox_imports_ts <- imports_ts # BoxCox(imports_ts, lambda)
+png("fig/imports/boxcox_imports_ts.png", width = 800, height = 400)
 ts.plot(boxcox_imports_ts, main = paste("Box-Cox Transformed Imports (lambda =", round(lambda, 3), ")"), ylab = "Transformed Imports")
+dev.off()
 ```
 
 We tried log, but residuals not normal.
@@ -58,7 +62,9 @@ We tried log, but residuals not normal.
 diff_imports_bc <- diff(boxcox_imports_ts, differences=1)
 
 # Plot differenced Box-Cox Imports
+png("fig/imports/diff_imports_bc.png", width = 800, height = 400)
 ts.plot(diff_imports_bc, main="Differenced Box-Cox Transformed Imports Time Series", ylab="Transformed Imports")
+dev.off()
 ```
 
 # Root test for stationarity check
@@ -75,10 +81,12 @@ cat("ADF test p-value:", round(adf_result$p.value, 4),
 # ACF / PACF plots
 ```{r}
 # ACF and PACF of the transformed and differenced series
+png("fig/imports/acf_pacf_diff.png", width = 800, height = 400)
 par(mfrow = c(1, 2))
 Acf(diff_imports_bc, main = "ACF of Imports")
 Pacf(diff_imports_bc, main = "PACF of Imports")
 par(mfrow = c(1, 1))
+dev.off()
 ```
 
 # Modeling
@@ -91,10 +99,12 @@ print(final_model)
 residuals_final <- residuals(final_model)
 
 # Residual ACF and PACF for final model
+png("fig/imports/resid_acf_pacf_model1.png", width = 800, height = 400)
 par(mfrow = c(1, 2))  # Side-by-side layout
 acf(residuals_final, main = "ACF of Final Model Residuals")
 pacf(residuals_final, main = "PACF of Final Model Residuals")
 par(mfrow = c(1, 1))  # Reset layout
+dev.off()
 
 # Diagnostic Tests (Simplified)
 cat("\nDiagnostic Tests (Simplified):\n")
@@ -106,10 +116,12 @@ cat("Ljung-Box test p-value:", round(ljung$p.value, 4),
 
 # Ljung-Box test plot
 lb_pvalues <- sapply(1:20, function(lag) Box.test(residuals_final, lag = lag, type = "Ljung-Box")$p.value)
+png("fig/imports/ljung_box_pvalues_model1.png", width = 800, height = 400)
 plot(1:20, lb_pvalues, type = "b", pch = 19, ylim = c(0, 1),
      xlab = "Lag", ylab = "Ljung-Box p-value",
      main = "Ljung-Box Test p-values by Lag")
 abline(h = 0.05, col = "red", lty = 2)
+dev.off()
 
 # 2. Shapiro-Wilk Test for Normality
 # this does not violate model assumptions, but it violates confidence interval assumptions
@@ -149,10 +161,12 @@ print(final_model)
 residuals_final <- residuals(final_model)
 
 # Residual ACF and PACF for final model
+png("fig/imports/resid_acf_pacf_final.png", width = 800, height = 400)
 par(mfrow = c(1, 2))  # Side-by-side layout
 acf(residuals_final, main = "ACF of Final Model Residuals")
 pacf(residuals_final, main = "PACF of Final Model Residuals")
 par(mfrow = c(1, 1))  # Reset layout
+dev.off()
 
 cat("\nDiagnostic Tests:\n")
 # 1. Ljung-Box test
@@ -162,10 +176,12 @@ cat("Ljung-Box test p-value:", round(ljung$p.value, 4),
 
 # Ljung-Box test plot
 lb_pvalues <- sapply(1:20, function(lag) Box.test(residuals_final, lag = lag, type = "Ljung-Box")$p.value)
+png("fig/imports/ljung_box_pvalues_final.png", width = 800, height = 400)
 plot(1:20, lb_pvalues, type = "b", pch = 19, ylim = c(0, 1),
      xlab = "Lag", ylab = "Ljung-Box p-value",
      main = "Ljung-Box Test p-values by Lag")
 abline(h = 0.05, col = "red", lty = 2)
+dev.off()
 
 # 2. Normality test
 # this does not violate model assumptions, but it violates confidence interval assumptions
@@ -223,7 +239,6 @@ df_forecast <- data.frame(
   Upper = inv_upper
 )
 
-# Plot forecast with historical data
 ggplot() +
   geom_line(data = df_history, aes(x = Year, y = Imports), color = "black") +
   geom_line(data = df_forecast, aes(x = Year, y = Forecast), color = "blue") +
@@ -231,6 +246,7 @@ ggplot() +
   ggtitle("ARIMA Forecast of Imports") +
   xlab("Year") + ylab("Imports $") +
   theme_minimal()
+ggsave("fig/imports/forecast_plot.png", width = 8, height = 4)
 ```
 
 ## Project fitted values onto training data and plot actual vs fitted
@@ -249,11 +265,11 @@ df_fitted <- data.frame(
   Fitted = fitted_original
 )
 
-# Plot actual vs fitted
 ggplot(df_fitted, aes(x = Year)) +
   geom_line(aes(y = Actual), color = "black", linetype = "solid") +
   geom_line(aes(y = Fitted), color = "red", linetype = "dashed") +
   ggtitle("Fitted ARIMA Model vs Actual Imports") +
   ylab("Imports") + xlab("Year") +
   theme_minimal()
+ggsave("fig/imports/fitted_vs_actual.png", width = 8, height = 4)
 ```
