@@ -1,10 +1,12 @@
 ---
-title: "STA 137 Final Project"
-author: "Andrew Jowe,"
-date: "2025-06-08"
+title: "Imports ARIMA"
+author: "Andrew Jowe"
 output:
-  pdf_document: default
-  html_document: default
+  pdf_document:
+    latex_engine: xelatex
+    keep_tex: true
+    includes:
+      in_header: preamble.tex
 ---
 
 ```{r, include=FALSE}
@@ -173,7 +175,7 @@ imports_forecast <- forecast(final_model, h = forecast_horizon)
 
 # Plot the forecast
 autoplot(imports_forecast) +
-  ggtitle("Forecast of Imports") +
+  ggtitle("ARIMA Forecast of Imports (in Millions \\$)") +
   xlab("Year") +
   ylab("Imports") +
   theme_minimal()

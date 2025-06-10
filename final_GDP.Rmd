@@ -1,12 +1,13 @@
 ---
-title: "STA 137 Final Project"
-author: "Andrew Jowe,"
-date: "2025-06-08"
+title: "GDP ARIMA"
+author: "Andrew Jowe"
 output:
-  pdf_document: default
-  html_document: default
+  pdf_document:
+    latex_engine: xelatex
+    keep_tex: true
+    includes:
+      in_header: preamble.tex
 ---
-
 ```{r, include=FALSE}
 # Load library
 library(car)
@@ -90,7 +91,7 @@ cat("\nDiagnostic Tests (Simplified):\n")
 # 1. Portmanteau (Ljung-Box) Test for Autocorrelation
 ljung <- Box.test(residuals_final, lag = 10, type = "Ljung-Box")
 cat("Ljung-Box test p-value:", round(ljung$p.value, 4), 
-    ifelse(ljung$p.value > 0.05, "(PASS - residuals ≈ white noise)", "(FAIL)"), "\n")
+    ifelse(ljung$p.value > 0.05, "(PASS - residuals approx white noise)", "(FAIL)"), "\n")
 
 # 2. Shapiro-Wilk Test for Normality
 # this does not violate model assumptions, but it violates confidence interval assumptions
@@ -170,13 +171,21 @@ cat("FINAL MODEL: ARIMA(0,1,0) for Box-Cox transformed GDP\n")
 
 # Forecasting the next 10 time periods
 ```{r}
+library(ggplot2)
+library(forecast)
+
 forecast_horizon <- 10
 forecast_values <- forecast(final_model, h = forecast_horizon)
 
-# Plot the forecast
+# Enable LaTeX rendering in plots
+par(pty="m") # reset plot type if needed
+options(repr.plot.width=7, repr.plot.height=5)
+# Note: In R base plotting, LaTeX rendering is not native; ggplot2 with expression() or latex2exp can be used.
+# Here we set theme with theme_minimal() and use expression for labels.
+
 autoplot(forecast_values) +
-  ggtitle("Forecast for GDP") +
-  xlab("Year") +
-  ylab("GDP") +
+  ggtitle(expression("Forecast for GDP")) +
+  xlab(expression("Year")) +
+  ylab(expression("GDP")) +
   theme_minimal()
 ```
