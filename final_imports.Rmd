@@ -125,6 +125,11 @@ dev.off()
 
 # 2. Shapiro-Wilk Test for Normality
 # this does not violate model assumptions, but it violates confidence interval assumptions
+png("fig/imports/qqplot_final_residuals.png", width = 800, height = 400)
+qqnorm(residuals_final, main = "Q-Q Plot of Final Model Residuals")
+qqline(residuals_final, col = "red")
+dev.off()
+
 shapiro <- shapiro.test(residuals_final)
 cat("Shapiro-Wilk test p-value:", round(shapiro$p.value, 4), 
     ifelse(shapiro$p.value > 0.05, "(PASS - approx. normal residuals)", "(FAIL)"), "\n")
@@ -158,6 +163,15 @@ cat("\nBest model by AIC:", results$Model[which.min(results$AIC)], "\n")
 # STEP 4: Final Model and Diagnostics
 final_model <- Arima(boxcox_imports_ts, order = c(2, 1, 0), method = "ML")
 print(final_model)
+
+# Calculate and display coefficient estimates and p-values
+coefs <- coef(final_model)
+se <- sqrt(diag(vcov(final_model)))
+z_vals <- coefs / se
+p_vals <- 2 * (1 - pnorm(abs(z_vals)))
+cat("Coefficient Estimates and P-values:\n")
+print(data.frame(Estimate = coefs, Std.Error = se, z = z_vals, p.value = p_vals))
+
 residuals_final <- residuals(final_model)
 
 # Residual ACF and PACF for final model
