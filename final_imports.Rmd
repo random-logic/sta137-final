@@ -46,7 +46,7 @@ Summary:
 ```{r}
 # Box-Cox transform Imports
 lambda <- BoxCox.lambda(imports_ts)
-boxcox_imports_ts <- BoxCox(imports_ts, lambda)
+boxcox_imports_ts <- imports_ts # BoxCox(imports_ts, lambda)
 ts.plot(boxcox_imports_ts, main = paste("Box-Cox Transformed Imports (lambda =", round(lambda, 3), ")"), ylab = "Transformed Imports")
 ```
 
@@ -55,7 +55,7 @@ We tried log, but residuals not normal.
 # Differencing Imports
 
 ```{r}
-diff_imports_bc <- diff(boxcox_imports_ts, differences=2)
+diff_imports_bc <- diff(boxcox_imports_ts, differences=1)
 
 # Plot differenced Box-Cox Imports
 ts.plot(diff_imports_bc, main="Differenced Box-Cox Transformed Imports Time Series", ylab="Transformed Imports")
@@ -76,18 +76,17 @@ cat("ADF test p-value:", round(adf_result$p.value, 4),
 ```{r}
 # ACF and PACF of the transformed and differenced series
 par(mfrow = c(1, 2))
-Acf(diff_imports_bc, main = "ACF of Transformed + Differenced Series")
-Pacf(diff_imports_bc, main = "PACF of Transformed + Differenced Series")
+Acf(diff_imports_bc, main = "ACF of Imports")
+Pacf(diff_imports_bc, main = "PACF of Imports")
 par(mfrow = c(1, 1))
 ```
 
 # Modeling
 ```{r}
 # Central African Republic Imports ARIMA Model
-# Author: Om C
 
 # Diagnostics on chosen model
-final_model <- Arima(boxcox_imports_ts, order = c(2, 2, 4), method = "ML")
+final_model <- Arima(boxcox_imports_ts, order = c(2, 1, 2), method = "ML")
 print(final_model)
 residuals_final <- residuals(final_model)
 
@@ -112,12 +111,12 @@ cat("Shapiro-Wilk test p-value:", round(shapiro$p.value, 4),
     ifelse(shapiro$p.value > 0.05, "(PASS - approx. normal residuals)", "(FAIL)"), "\n")
 
 # STEP 3: Model Comparison
-# Expanded grid search from ARIMA(0,2,0) to ARIMA(8,2,8)
+# Expanded grid search from ARIMA(0,1,0) to ARIMA(4,1,4)
 models <- list()
-for (p in 0:8) {
-  for (q in 0:8) {
-    name <- paste0("ARIMA(", p, ",2,", q, ")")
-    models[[name]] <- c(p, 2, q)
+for (p in 0:4) {
+  for (q in 0:4) {
+    name <- paste0("ARIMA(", p, ",1,", q, ")")
+    models[[name]] <- c(p, 1, q)
   }
 }
 results <- data.frame(Model=character(), AIC=numeric(), BIC=numeric(), 
@@ -138,7 +137,7 @@ print(results)
 cat("\nBest model by AIC:", results$Model[which.min(results$AIC)], "\n")
 
 # STEP 4: Final Model and Diagnostics
-final_model <- Arima(boxcox_imports_ts, order = c(0, 2, 3), method = "ML")
+final_model <- Arima(boxcox_imports_ts, order = c(2, 1, 0), method = "ML")
 print(final_model)
 residuals_final <- residuals(final_model)
 
@@ -175,7 +174,7 @@ upper_original <- (lambda * forecast_result$upper + 1)^(1/lambda)
 cat("1-step ahead forecast (original Imports scale):", round(forecast_original[1], 2), "Imports\n")
 cat("95% prediction interval: [", round(lower_original[1,2], 2), ",", 
     round(upper_original[1,2], 2), "] Imports\n\n")
-cat("FINAL MODEL: ARIMA(0,1,0) for Box-Cox transformed Imports\n")
+cat("FINAL MODEL: ARIMA(2, 1, 0) for Box-Cox transformed Imports\n")
 ```
 
 
@@ -186,7 +185,7 @@ imports_forecast <- forecast(final_model, h = forecast_horizon)
 
 # Plot the forecast
 autoplot(imports_forecast) +
-  ggtitle("ARIMA Forecast of Imports (in Millions \\$)") +
+  ggtitle("ARIMA Forecast of Imports (in Millions $)") +
   xlab("Year") +
   ylab("Imports") +
   theme_minimal()

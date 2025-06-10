@@ -169,7 +169,7 @@ upper_original <- (lambda * forecast_result$upper + 1)^(1/lambda)
 cat("1-step ahead forecast (original GDP scale):", round(forecast_original[1], 2), "million USD\n")
 cat("95% prediction interval: [", round(lower_original[1,2], 2), ",", 
     round(upper_original[1,2], 2), "] million USD\n\n")
-cat("FINAL MODEL: ARIMA(0,1,0) for Box-Cox transformed GDP\n")
+cat("FINAL MODEL: ARIMA(0, 2, 1) for Box-Cox transformed GDP\n")
 ```
 
 # Forecasting the next 10 time periods
