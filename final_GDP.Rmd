@@ -212,3 +212,27 @@ ggplot() +
   xlab("Year") + ylab("GDP $") +
   theme_minimal()
 ```
+
+```{r}
+# Project final ARIMA model onto training data (fitted values)
+fitted_values <- fitted(final_model)
+fitted_original <- inv_boxcox(fitted_values, lambda)
+
+# Actual values in original scale
+actual_values <- inv_boxcox(boxcox_gdp_ts, lambda)
+years <- time(boxcox_gdp_ts)
+
+df_fitted <- data.frame(
+  Year = years,
+  Actual = actual_values,
+  Fitted = fitted_original
+)
+
+# Plot actual vs fitted
+ggplot(df_fitted, aes(x = Year)) +
+  geom_line(aes(y = Actual), color = "black", linetype = "solid") +
+  geom_line(aes(y = Fitted), color = "red", linetype = "dashed") +
+  ggtitle("Fitted ARIMA Model vs Actual GDP") +
+  ylab("GDP") + xlab("Year") +
+  theme_minimal()
+```
