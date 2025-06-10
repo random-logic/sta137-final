@@ -475,28 +475,27 @@ check}\label{root-test-for-stationarity-check}
 \begin{Highlighting}[]
 \CommentTok{\# STEP 5: Forecast with Inverse Transformation}
 \NormalTok{forecast\_result }\OtherTok{\textless{}{-}} \FunctionTok{forecast}\NormalTok{(final\_model, }\AttributeTok{h =} \DecValTok{3}\NormalTok{)}
-\NormalTok{lambda }\OtherTok{\textless{}{-}} \FloatTok{0.1}
 \CommentTok{\# Inverse Box{-}Cox transformation}
 \NormalTok{forecast\_original }\OtherTok{\textless{}{-}}\NormalTok{ (lambda }\SpecialCharTok{*}\NormalTok{ forecast\_result}\SpecialCharTok{$}\NormalTok{mean }\SpecialCharTok{+} \DecValTok{1}\NormalTok{)}\SpecialCharTok{\^{}}\NormalTok{(}\DecValTok{1}\SpecialCharTok{/}\NormalTok{lambda)}
 \NormalTok{lower\_original }\OtherTok{\textless{}{-}}\NormalTok{ (lambda }\SpecialCharTok{*}\NormalTok{ forecast\_result}\SpecialCharTok{$}\NormalTok{lower }\SpecialCharTok{+} \DecValTok{1}\NormalTok{)}\SpecialCharTok{\^{}}\NormalTok{(}\DecValTok{1}\SpecialCharTok{/}\NormalTok{lambda)}
 \NormalTok{upper\_original }\OtherTok{\textless{}{-}}\NormalTok{ (lambda }\SpecialCharTok{*}\NormalTok{ forecast\_result}\SpecialCharTok{$}\NormalTok{upper }\SpecialCharTok{+} \DecValTok{1}\NormalTok{)}\SpecialCharTok{\^{}}\NormalTok{(}\DecValTok{1}\SpecialCharTok{/}\NormalTok{lambda)}
-\FunctionTok{cat}\NormalTok{(}\StringTok{"1{-}step ahead forecast (original GDP scale):"}\NormalTok{, }\FunctionTok{round}\NormalTok{(forecast\_original[}\DecValTok{1}\NormalTok{], }\DecValTok{2}\NormalTok{), }\StringTok{"million USD}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\FunctionTok{cat}\NormalTok{(}\StringTok{"1{-}step ahead forecast (original GDP scale):"}\NormalTok{, }\FunctionTok{round}\NormalTok{(forecast\_original[}\DecValTok{1}\NormalTok{], }\DecValTok{2}\NormalTok{), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
 \begin{verbatim}
-## 1-step ahead forecast (original GDP scale): 50.66 million USD
+## 1-step ahead forecast (original GDP scale): 2009093633
 \end{verbatim}
 
 \begin{Shaded}
 \begin{Highlighting}[]
 \FunctionTok{cat}\NormalTok{(}\StringTok{"95\% prediction interval: ["}\NormalTok{, }\FunctionTok{round}\NormalTok{(lower\_original[}\DecValTok{1}\NormalTok{,}\DecValTok{2}\NormalTok{], }\DecValTok{2}\NormalTok{), }\StringTok{","}\NormalTok{, }
-    \FunctionTok{round}\NormalTok{(upper\_original[}\DecValTok{1}\NormalTok{,}\DecValTok{2}\NormalTok{], }\DecValTok{2}\NormalTok{), }\StringTok{"] million USD}\SpecialCharTok{\textbackslash{}n\textbackslash{}n}\StringTok{"}\NormalTok{)}
+    \FunctionTok{round}\NormalTok{(upper\_original[}\DecValTok{1}\NormalTok{,}\DecValTok{2}\NormalTok{], }\DecValTok{2}\NormalTok{), }\StringTok{"]}\SpecialCharTok{\textbackslash{}n\textbackslash{}n}\StringTok{"}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
 \begin{verbatim}
-## 95% prediction interval: [ 50.52 , 50.81 ] million USD
+## 95% prediction interval: [ 1442474256 , 2866874771 ]
 \end{verbatim}
 
 \begin{Shaded}
@@ -509,30 +508,58 @@ check}\label{root-test-for-stationarity-check}
 ## FINAL MODEL: ARIMA(0, 2, 1) for Box-Cox transformed GDP
 \end{verbatim}
 
-\section{Forecasting the next 10 time
-periods}\label{forecasting-the-next-10-time-periods}
+\section{Forecasting the next 5 time
+periods}\label{forecasting-the-next-5-time-periods}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\FunctionTok{library}\NormalTok{(ggplot2)}
-\FunctionTok{library}\NormalTok{(forecast)}
+\CommentTok{\# Forecast next 5 periods using the best model and inverse Box{-}Cox transform}
+\NormalTok{forecast\_horizon }\OtherTok{\textless{}{-}} \DecValTok{5}
+\NormalTok{gdp\_forecast }\OtherTok{\textless{}{-}} \FunctionTok{forecast}\NormalTok{(final\_model, }\AttributeTok{h =}\NormalTok{ forecast\_horizon)}
 
-\NormalTok{forecast\_horizon }\OtherTok{\textless{}{-}} \DecValTok{10}
-\NormalTok{forecast\_values }\OtherTok{\textless{}{-}} \FunctionTok{forecast}\NormalTok{(final\_model, }\AttributeTok{h =}\NormalTok{ forecast\_horizon)}
+\CommentTok{\# Inverse Box{-}Cox function}
+\NormalTok{inv\_boxcox }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(x, lambda) \{}
+  \ControlFlowTok{if}\NormalTok{ (lambda }\SpecialCharTok{==} \DecValTok{0}\NormalTok{) }\FunctionTok{exp}\NormalTok{(x) }\ControlFlowTok{else}\NormalTok{ (lambda }\SpecialCharTok{*}\NormalTok{ x }\SpecialCharTok{+} \DecValTok{1}\NormalTok{)}\SpecialCharTok{\^{}}\NormalTok{(}\DecValTok{1} \SpecialCharTok{/}\NormalTok{ lambda)}
+\NormalTok{\}}
 
-\CommentTok{\# Enable LaTeX rendering in plots}
-\FunctionTok{par}\NormalTok{(}\AttributeTok{pty=}\StringTok{"m"}\NormalTok{) }\CommentTok{\# reset plot type if needed}
-\FunctionTok{options}\NormalTok{(}\AttributeTok{repr.plot.width=}\DecValTok{7}\NormalTok{, }\AttributeTok{repr.plot.height=}\DecValTok{5}\NormalTok{)}
-\CommentTok{\# Note: In R base plotting, LaTeX rendering is not native; ggplot2 with expression() or latex2exp can be used.}
-\CommentTok{\# Here we set theme with theme\_minimal() and use expression for labels.}
+\CommentTok{\# Apply inverse transform to forecast}
+\NormalTok{inv\_forecast }\OtherTok{\textless{}{-}} \FunctionTok{inv\_boxcox}\NormalTok{(gdp\_forecast}\SpecialCharTok{$}\NormalTok{mean, lambda)}
+\NormalTok{inv\_lower }\OtherTok{\textless{}{-}} \FunctionTok{inv\_boxcox}\NormalTok{(gdp\_forecast}\SpecialCharTok{$}\NormalTok{lower[, }\DecValTok{2}\NormalTok{], lambda)}
+\NormalTok{inv\_upper }\OtherTok{\textless{}{-}} \FunctionTok{inv\_boxcox}\NormalTok{(gdp\_forecast}\SpecialCharTok{$}\NormalTok{upper[, }\DecValTok{2}\NormalTok{], lambda)}
 
-\FunctionTok{autoplot}\NormalTok{(forecast\_values) }\SpecialCharTok{+}
-  \FunctionTok{ggtitle}\NormalTok{(}\FunctionTok{expression}\NormalTok{(}\StringTok{"Forecast for GDP"}\NormalTok{)) }\SpecialCharTok{+}
-  \FunctionTok{xlab}\NormalTok{(}\FunctionTok{expression}\NormalTok{(}\StringTok{"Year"}\NormalTok{)) }\SpecialCharTok{+}
-  \FunctionTok{ylab}\NormalTok{(}\FunctionTok{expression}\NormalTok{(}\StringTok{"GDP"}\NormalTok{)) }\SpecialCharTok{+}
+\CommentTok{\# Combine historical and forecast data}
+\NormalTok{historical\_years }\OtherTok{\textless{}{-}} \FunctionTok{time}\NormalTok{(boxcox\_gdp\_ts)}
+\NormalTok{historical\_values }\OtherTok{\textless{}{-}} \FunctionTok{inv\_boxcox}\NormalTok{(boxcox\_gdp\_ts, lambda)}
+\NormalTok{df\_history }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
+  \AttributeTok{Year =}\NormalTok{ historical\_years,}
+  \AttributeTok{GDP =}\NormalTok{ historical\_values}
+\NormalTok{)}
+
+\NormalTok{forecast\_years }\OtherTok{\textless{}{-}} \FunctionTok{time}\NormalTok{(gdp\_forecast}\SpecialCharTok{$}\NormalTok{mean)}
+\NormalTok{df\_forecast }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
+  \AttributeTok{Year =}\NormalTok{ forecast\_years,}
+  \AttributeTok{Forecast =}\NormalTok{ inv\_forecast,}
+  \AttributeTok{Lower =}\NormalTok{ inv\_lower,}
+  \AttributeTok{Upper =}\NormalTok{ inv\_upper}
+\NormalTok{)}
+
+\CommentTok{\# Plot forecast with historical data}
+\FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\AttributeTok{data =}\NormalTok{ df\_history, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Year, }\AttributeTok{y =}\NormalTok{ GDP), }\AttributeTok{color =} \StringTok{"black"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\AttributeTok{data =}\NormalTok{ df\_forecast, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Year, }\AttributeTok{y =}\NormalTok{ Forecast), }\AttributeTok{color =} \StringTok{"blue"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_ribbon}\NormalTok{(}\AttributeTok{data =}\NormalTok{ df\_forecast, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Year, }\AttributeTok{ymin =}\NormalTok{ Lower, }\AttributeTok{ymax =}\NormalTok{ Upper), }\AttributeTok{alpha =} \FloatTok{0.2}\NormalTok{, }\AttributeTok{fill =} \StringTok{"blue"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"ARIMA Forecast of GDP"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{xlab}\NormalTok{(}\StringTok{"Year"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{ylab}\NormalTok{(}\StringTok{"GDP $"}\NormalTok{) }\SpecialCharTok{+}
   \FunctionTok{theme\_minimal}\NormalTok{()}
 \end{Highlighting}
 \end{Shaded}
+
+\begin{verbatim}
+## Don't know how to automatically pick scale for object of type <ts>.
+## Defaulting to continuous.
+## Don't know how to automatically pick scale for object of type <ts>.
+## Defaulting to continuous.
+\end{verbatim}
 
 \pandocbounded{\includegraphics[keepaspectratio]{final_GDP_files/figure-latex/unnamed-chunk-9-1.pdf}}
 

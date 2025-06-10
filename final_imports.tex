@@ -474,7 +474,6 @@ check}\label{root-test-for-stationarity-check}
 \begin{Highlighting}[]
 \CommentTok{\# STEP 5: Forecast with Inverse Transformation}
 \NormalTok{forecast\_result }\OtherTok{\textless{}{-}} \FunctionTok{forecast}\NormalTok{(final\_model, }\AttributeTok{h =} \DecValTok{3}\NormalTok{)}
-\NormalTok{lambda }\OtherTok{\textless{}{-}} \FloatTok{0.1}
 \CommentTok{\# Inverse Box{-}Cox transformation}
 \NormalTok{forecast\_original }\OtherTok{\textless{}{-}}\NormalTok{ (lambda }\SpecialCharTok{*}\NormalTok{ forecast\_result}\SpecialCharTok{$}\NormalTok{mean }\SpecialCharTok{+} \DecValTok{1}\NormalTok{)}\SpecialCharTok{\^{}}\NormalTok{(}\DecValTok{1}\SpecialCharTok{/}\NormalTok{lambda)}
 \NormalTok{lower\_original }\OtherTok{\textless{}{-}}\NormalTok{ (lambda }\SpecialCharTok{*}\NormalTok{ forecast\_result}\SpecialCharTok{$}\NormalTok{lower }\SpecialCharTok{+} \DecValTok{1}\NormalTok{)}\SpecialCharTok{\^{}}\NormalTok{(}\DecValTok{1}\SpecialCharTok{/}\NormalTok{lambda)}
@@ -484,7 +483,7 @@ check}\label{root-test-for-stationarity-check}
 \end{Shaded}
 
 \begin{verbatim}
-## 1-step ahead forecast (original Imports scale): 2338369 Imports
+## 1-step ahead forecast (original Imports scale): 522.05 Imports
 \end{verbatim}
 
 \begin{Shaded}
@@ -495,7 +494,7 @@ check}\label{root-test-for-stationarity-check}
 \end{Shaded}
 
 \begin{verbatim}
-## 95% prediction interval: [ 417519 , 10162153 ] Imports
+## 95% prediction interval: [ 320.9 , 779.33 ] Imports
 \end{verbatim}
 
 \begin{Shaded}
@@ -508,22 +507,58 @@ check}\label{root-test-for-stationarity-check}
 ## FINAL MODEL: ARIMA(2, 1, 0) for Box-Cox transformed Imports
 \end{verbatim}
 
-\section{Forecast next 10 periods using the best
-model}\label{forecast-next-10-periods-using-the-best-model}
+\section{Forecast next 5 periods using the best model and inverse
+Box-Cox
+transform}\label{forecast-next-5-periods-using-the-best-model-and-inverse-box-cox-transform}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{forecast\_horizon }\OtherTok{\textless{}{-}} \DecValTok{10}
+\NormalTok{forecast\_horizon }\OtherTok{\textless{}{-}} \DecValTok{5}
 \NormalTok{imports\_forecast }\OtherTok{\textless{}{-}} \FunctionTok{forecast}\NormalTok{(final\_model, }\AttributeTok{h =}\NormalTok{ forecast\_horizon)}
 
-\CommentTok{\# Plot the forecast}
-\FunctionTok{autoplot}\NormalTok{(imports\_forecast) }\SpecialCharTok{+}
-  \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"ARIMA Forecast of Imports (in Millions $)"}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{xlab}\NormalTok{(}\StringTok{"Year"}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{ylab}\NormalTok{(}\StringTok{"Imports"}\NormalTok{) }\SpecialCharTok{+}
+\CommentTok{\# Inverse Box{-}Cox function}
+\NormalTok{inv\_boxcox }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(x, lambda) \{}
+  \ControlFlowTok{if}\NormalTok{ (lambda }\SpecialCharTok{==} \DecValTok{0}\NormalTok{) }\FunctionTok{exp}\NormalTok{(x) }\ControlFlowTok{else}\NormalTok{ (lambda }\SpecialCharTok{*}\NormalTok{ x }\SpecialCharTok{+} \DecValTok{1}\NormalTok{)}\SpecialCharTok{\^{}}\NormalTok{(}\DecValTok{1} \SpecialCharTok{/}\NormalTok{ lambda)}
+\NormalTok{\}}
+
+\CommentTok{\# Use stored lambda from earlier}
+\NormalTok{inv\_forecast }\OtherTok{\textless{}{-}} \FunctionTok{inv\_boxcox}\NormalTok{(imports\_forecast}\SpecialCharTok{$}\NormalTok{mean, lambda)}
+\NormalTok{inv\_lower }\OtherTok{\textless{}{-}} \FunctionTok{inv\_boxcox}\NormalTok{(imports\_forecast}\SpecialCharTok{$}\NormalTok{lower[, }\DecValTok{2}\NormalTok{], lambda)}
+\NormalTok{inv\_upper }\OtherTok{\textless{}{-}} \FunctionTok{inv\_boxcox}\NormalTok{(imports\_forecast}\SpecialCharTok{$}\NormalTok{upper[, }\DecValTok{2}\NormalTok{], lambda)}
+
+\CommentTok{\# Combine historical and forecast data}
+\NormalTok{historical\_years }\OtherTok{\textless{}{-}} \FunctionTok{time}\NormalTok{(boxcox\_imports\_ts)}
+\NormalTok{historical\_values }\OtherTok{\textless{}{-}} \FunctionTok{inv\_boxcox}\NormalTok{(boxcox\_imports\_ts, lambda)}
+\NormalTok{df\_history }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
+  \AttributeTok{Year =}\NormalTok{ historical\_years,}
+  \AttributeTok{Imports =}\NormalTok{ historical\_values}
+\NormalTok{)}
+
+\NormalTok{forecast\_years }\OtherTok{\textless{}{-}} \FunctionTok{time}\NormalTok{(imports\_forecast}\SpecialCharTok{$}\NormalTok{mean)}
+\NormalTok{df\_forecast }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
+  \AttributeTok{Year =}\NormalTok{ forecast\_years,}
+  \AttributeTok{Forecast =}\NormalTok{ inv\_forecast,}
+  \AttributeTok{Lower =}\NormalTok{ inv\_lower,}
+  \AttributeTok{Upper =}\NormalTok{ inv\_upper}
+\NormalTok{)}
+
+\CommentTok{\# Plot forecast with historical data}
+\FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\AttributeTok{data =}\NormalTok{ df\_history, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Year, }\AttributeTok{y =}\NormalTok{ Imports), }\AttributeTok{color =} \StringTok{"black"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\AttributeTok{data =}\NormalTok{ df\_forecast, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Year, }\AttributeTok{y =}\NormalTok{ Forecast), }\AttributeTok{color =} \StringTok{"blue"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_ribbon}\NormalTok{(}\AttributeTok{data =}\NormalTok{ df\_forecast, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Year, }\AttributeTok{ymin =}\NormalTok{ Lower, }\AttributeTok{ymax =}\NormalTok{ Upper), }\AttributeTok{alpha =} \FloatTok{0.2}\NormalTok{, }\AttributeTok{fill =} \StringTok{"blue"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"ARIMA Forecast of Imports"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{xlab}\NormalTok{(}\StringTok{"Year"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{ylab}\NormalTok{(}\StringTok{"Imports $"}\NormalTok{) }\SpecialCharTok{+}
   \FunctionTok{theme\_minimal}\NormalTok{()}
 \end{Highlighting}
 \end{Shaded}
+
+\begin{verbatim}
+## Don't know how to automatically pick scale for object of
+## type <ts>. Defaulting to continuous.
+## Don't know how to automatically pick scale for object of
+## type <ts>. Defaulting to continuous.
+\end{verbatim}
 
 \pandocbounded{\includegraphics[keepaspectratio]{final_imports_files/figure-latex/unnamed-chunk-9-1.pdf}}
 

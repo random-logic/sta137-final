@@ -161,34 +161,54 @@ cat("Q-Q plot shows approximate normality with minor tail deviations\n\n")
 
 # STEP 5: Forecast with Inverse Transformation
 forecast_result <- forecast(final_model, h = 3)
-lambda <- 0.1
 # Inverse Box-Cox transformation
 forecast_original <- (lambda * forecast_result$mean + 1)^(1/lambda)
 lower_original <- (lambda * forecast_result$lower + 1)^(1/lambda)
 upper_original <- (lambda * forecast_result$upper + 1)^(1/lambda)
-cat("1-step ahead forecast (original GDP scale):", round(forecast_original[1], 2), "million USD\n")
+cat("1-step ahead forecast (original GDP scale):", round(forecast_original[1], 2), "\n")
 cat("95% prediction interval: [", round(lower_original[1,2], 2), ",", 
-    round(upper_original[1,2], 2), "] million USD\n\n")
+    round(upper_original[1,2], 2), "]\n\n")
 cat("FINAL MODEL: ARIMA(0, 2, 1) for Box-Cox transformed GDP\n")
 ```
 
-# Forecasting the next 10 time periods
+# Forecasting the next 5 time periods
 ```{r}
-library(ggplot2)
-library(forecast)
+# Forecast next 5 periods using the best model and inverse Box-Cox transform
+forecast_horizon <- 5
+gdp_forecast <- forecast(final_model, h = forecast_horizon)
 
-forecast_horizon <- 10
-forecast_values <- forecast(final_model, h = forecast_horizon)
+# Inverse Box-Cox function
+inv_boxcox <- function(x, lambda) {
+  if (lambda == 0) exp(x) else (lambda * x + 1)^(1 / lambda)
+}
 
-# Enable LaTeX rendering in plots
-par(pty="m") # reset plot type if needed
-options(repr.plot.width=7, repr.plot.height=5)
-# Note: In R base plotting, LaTeX rendering is not native; ggplot2 with expression() or latex2exp can be used.
-# Here we set theme with theme_minimal() and use expression for labels.
+# Apply inverse transform to forecast
+inv_forecast <- inv_boxcox(gdp_forecast$mean, lambda)
+inv_lower <- inv_boxcox(gdp_forecast$lower[, 2], lambda)
+inv_upper <- inv_boxcox(gdp_forecast$upper[, 2], lambda)
 
-autoplot(forecast_values) +
-  ggtitle(expression("Forecast for GDP")) +
-  xlab(expression("Year")) +
-  ylab(expression("GDP")) +
+# Combine historical and forecast data
+historical_years <- time(boxcox_gdp_ts)
+historical_values <- inv_boxcox(boxcox_gdp_ts, lambda)
+df_history <- data.frame(
+  Year = historical_years,
+  GDP = historical_values
+)
+
+forecast_years <- time(gdp_forecast$mean)
+df_forecast <- data.frame(
+  Year = forecast_years,
+  Forecast = inv_forecast,
+  Lower = inv_lower,
+  Upper = inv_upper
+)
+
+# Plot forecast with historical data
+ggplot() +
+  geom_line(data = df_history, aes(x = Year, y = GDP), color = "black") +
+  geom_line(data = df_forecast, aes(x = Year, y = Forecast), color = "blue") +
+  geom_ribbon(data = df_forecast, aes(x = Year, ymin = Lower, ymax = Upper), alpha = 0.2, fill = "blue") +
+  ggtitle("ARIMA Forecast of GDP") +
+  xlab("Year") + ylab("GDP $") +
   theme_minimal()
 ```

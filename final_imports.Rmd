@@ -166,7 +166,6 @@ cat("Q-Q plot shows approximate normality with minor tail deviations\n\n")
 
 # STEP 5: Forecast with Inverse Transformation
 forecast_result <- forecast(final_model, h = 3)
-lambda <- 0.1
 # Inverse Box-Cox transformation
 forecast_original <- (lambda * forecast_result$mean + 1)^(1/lambda)
 lower_original <- (lambda * forecast_result$lower + 1)^(1/lambda)
@@ -178,15 +177,43 @@ cat("FINAL MODEL: ARIMA(2, 1, 0) for Box-Cox transformed Imports\n")
 ```
 
 
-# Forecast next 10 periods using the best model
+# Forecast next 5 periods using the best model and inverse Box-Cox transform
 ```{r}
-forecast_horizon <- 10
+forecast_horizon <- 5
 imports_forecast <- forecast(final_model, h = forecast_horizon)
 
-# Plot the forecast
-autoplot(imports_forecast) +
-  ggtitle("ARIMA Forecast of Imports (in Millions $)") +
-  xlab("Year") +
-  ylab("Imports") +
+# Inverse Box-Cox function
+inv_boxcox <- function(x, lambda) {
+  if (lambda == 0) exp(x) else (lambda * x + 1)^(1 / lambda)
+}
+
+# Use stored lambda from earlier
+inv_forecast <- inv_boxcox(imports_forecast$mean, lambda)
+inv_lower <- inv_boxcox(imports_forecast$lower[, 2], lambda)
+inv_upper <- inv_boxcox(imports_forecast$upper[, 2], lambda)
+
+# Combine historical and forecast data
+historical_years <- time(boxcox_imports_ts)
+historical_values <- inv_boxcox(boxcox_imports_ts, lambda)
+df_history <- data.frame(
+  Year = historical_years,
+  Imports = historical_values
+)
+
+forecast_years <- time(imports_forecast$mean)
+df_forecast <- data.frame(
+  Year = forecast_years,
+  Forecast = inv_forecast,
+  Lower = inv_lower,
+  Upper = inv_upper
+)
+
+# Plot forecast with historical data
+ggplot() +
+  geom_line(data = df_history, aes(x = Year, y = Imports), color = "black") +
+  geom_line(data = df_forecast, aes(x = Year, y = Forecast), color = "blue") +
+  geom_ribbon(data = df_forecast, aes(x = Year, ymin = Lower, ymax = Upper), alpha = 0.2, fill = "blue") +
+  ggtitle("ARIMA Forecast of Imports") +
+  xlab("Year") + ylab("Imports $") +
   theme_minimal()
 ```
