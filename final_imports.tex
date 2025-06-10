@@ -281,6 +281,19 @@ check}\label{root-test-for-stationarity-check}
 
 \begin{Shaded}
 \begin{Highlighting}[]
+\CommentTok{\# Ljung{-}Box test plot}
+\NormalTok{lb\_pvalues }\OtherTok{\textless{}{-}} \FunctionTok{sapply}\NormalTok{(}\DecValTok{1}\SpecialCharTok{:}\DecValTok{20}\NormalTok{, }\ControlFlowTok{function}\NormalTok{(lag) }\FunctionTok{Box.test}\NormalTok{(residuals\_final, }\AttributeTok{lag =}\NormalTok{ lag, }\AttributeTok{type =} \StringTok{"Ljung{-}Box"}\NormalTok{)}\SpecialCharTok{$}\NormalTok{p.value)}
+\FunctionTok{plot}\NormalTok{(}\DecValTok{1}\SpecialCharTok{:}\DecValTok{20}\NormalTok{, lb\_pvalues, }\AttributeTok{type =} \StringTok{"b"}\NormalTok{, }\AttributeTok{pch =} \DecValTok{19}\NormalTok{, }\AttributeTok{ylim =} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{),}
+     \AttributeTok{xlab =} \StringTok{"Lag"}\NormalTok{, }\AttributeTok{ylab =} \StringTok{"Ljung{-}Box p{-}value"}\NormalTok{,}
+     \AttributeTok{main =} \StringTok{"Ljung{-}Box Test p{-}values by Lag"}\NormalTok{)}
+\FunctionTok{abline}\NormalTok{(}\AttributeTok{h =} \FloatTok{0.05}\NormalTok{, }\AttributeTok{col =} \StringTok{"red"}\NormalTok{, }\AttributeTok{lty =} \DecValTok{2}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{final_imports_files/figure-latex/unnamed-chunk-8-2.pdf}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
 \CommentTok{\# 2. Shapiro{-}Wilk Test for Normality}
 \CommentTok{\# this does not violate model assumptions, but it violates confidence interval assumptions}
 \NormalTok{shapiro }\OtherTok{\textless{}{-}} \FunctionTok{shapiro.test}\NormalTok{(residuals\_final)}
@@ -394,7 +407,7 @@ check}\label{root-test-for-stationarity-check}
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{final_imports_files/figure-latex/unnamed-chunk-8-2.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{final_imports_files/figure-latex/unnamed-chunk-8-3.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -421,6 +434,19 @@ check}\label{root-test-for-stationarity-check}
 \begin{verbatim}
 ## Ljung-Box test p-value: 0.9779 (PASS)
 \end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Ljung{-}Box test plot}
+\NormalTok{lb\_pvalues }\OtherTok{\textless{}{-}} \FunctionTok{sapply}\NormalTok{(}\DecValTok{1}\SpecialCharTok{:}\DecValTok{20}\NormalTok{, }\ControlFlowTok{function}\NormalTok{(lag) }\FunctionTok{Box.test}\NormalTok{(residuals\_final, }\AttributeTok{lag =}\NormalTok{ lag, }\AttributeTok{type =} \StringTok{"Ljung{-}Box"}\NormalTok{)}\SpecialCharTok{$}\NormalTok{p.value)}
+\FunctionTok{plot}\NormalTok{(}\DecValTok{1}\SpecialCharTok{:}\DecValTok{20}\NormalTok{, lb\_pvalues, }\AttributeTok{type =} \StringTok{"b"}\NormalTok{, }\AttributeTok{pch =} \DecValTok{19}\NormalTok{, }\AttributeTok{ylim =} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{),}
+     \AttributeTok{xlab =} \StringTok{"Lag"}\NormalTok{, }\AttributeTok{ylab =} \StringTok{"Ljung{-}Box p{-}value"}\NormalTok{,}
+     \AttributeTok{main =} \StringTok{"Ljung{-}Box Test p{-}values by Lag"}\NormalTok{)}
+\FunctionTok{abline}\NormalTok{(}\AttributeTok{h =} \FloatTok{0.05}\NormalTok{, }\AttributeTok{col =} \StringTok{"red"}\NormalTok{, }\AttributeTok{lty =} \DecValTok{2}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{final_imports_files/figure-latex/unnamed-chunk-8-4.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -554,12 +580,50 @@ transform}\label{forecast-next-5-periods-using-the-best-model-and-inverse-box-co
 \end{Shaded}
 
 \begin{verbatim}
-## Don't know how to automatically pick scale for object of
-## type <ts>. Defaulting to continuous.
-## Don't know how to automatically pick scale for object of
-## type <ts>. Defaulting to continuous.
+## Don't know how to automatically pick scale for object of type <ts>.
+## Defaulting to continuous.
+## Don't know how to automatically pick scale for object of type <ts>.
+## Defaulting to continuous.
 \end{verbatim}
 
 \pandocbounded{\includegraphics[keepaspectratio]{final_imports_files/figure-latex/unnamed-chunk-9-1.pdf}}
+
+\subsection{Project fitted values onto training data and plot actual vs
+fitted}\label{project-fitted-values-onto-training-data-and-plot-actual-vs-fitted}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Project final ARIMA model onto training data (fitted values)}
+\NormalTok{fitted\_values }\OtherTok{\textless{}{-}} \FunctionTok{fitted}\NormalTok{(final\_model)}
+\NormalTok{fitted\_original }\OtherTok{\textless{}{-}} \FunctionTok{inv\_boxcox}\NormalTok{(fitted\_values, lambda)}
+
+\CommentTok{\# Actual values in original scale}
+\NormalTok{actual\_values }\OtherTok{\textless{}{-}} \FunctionTok{inv\_boxcox}\NormalTok{(boxcox\_imports\_ts, lambda)}
+\NormalTok{years }\OtherTok{\textless{}{-}} \FunctionTok{time}\NormalTok{(boxcox\_imports\_ts)}
+
+\NormalTok{df\_fitted }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
+  \AttributeTok{Year =}\NormalTok{ years,}
+  \AttributeTok{Actual =}\NormalTok{ actual\_values,}
+  \AttributeTok{Fitted =}\NormalTok{ fitted\_original}
+\NormalTok{)}
+
+\CommentTok{\# Plot actual vs fitted}
+\FunctionTok{ggplot}\NormalTok{(df\_fitted, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Year)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y =}\NormalTok{ Actual), }\AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{linetype =} \StringTok{"solid"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y =}\NormalTok{ Fitted), }\AttributeTok{color =} \StringTok{"red"}\NormalTok{, }\AttributeTok{linetype =} \StringTok{"dashed"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"Fitted ARIMA Model vs Actual Imports"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{ylab}\NormalTok{(}\StringTok{"Imports"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{xlab}\NormalTok{(}\StringTok{"Year"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Don't know how to automatically pick scale for object of type <ts>.
+## Defaulting to continuous.
+## Don't know how to automatically pick scale for object of type <ts>.
+## Defaulting to continuous.
+\end{verbatim}
+
+\pandocbounded{\includegraphics[keepaspectratio]{final_imports_files/figure-latex/unnamed-chunk-10-1.pdf}}
 
 \end{document}
